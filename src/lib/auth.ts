@@ -1,0 +1,108 @@
+import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
+import { prisma } from "./db";
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    // 개발용 테스트 로그인 (production에서는 제거)
+    Credentials({
+      name: "Test Login",
+      credentials: {
+        email: { label: "Email", type: "email" },
+      },
+      async authorize(credentials) {
+        if (process.env.NODE_ENV === "production") {
+          return null;
+        }
+
+        const email = credentials?.email as string;
+        if (!email) return null;
+
+        // 기존 사용자 찾기 또는 생성
+        let user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email,
+              name: email.split("@")[0],
+            },
+          });
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      },
+    }),
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  ],
+  pages: {
+    signIn: "/login",
+    verifyRequest: "/verify-request",
+    error: "/auth/error",
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        // @ts-expect-error - role exists on user
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        // @ts-expect-error - Add role to session
+        session.user.role = token.role;
+      }
+      return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl + "/dashboard";
+    },
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+});
+
+// Helper to get the current user in server components
+export async function getCurrentUser() {
+  const session = await auth();
+  return session?.user;
+}
+
+// Helper to require authentication
+export async function requireAuth() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+  return user;
+}
+
+// Helper to require admin role
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+  // @ts-expect-error - role is added in session callback
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Forbidden");
+  }
+  return user;
+}

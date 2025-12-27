@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+  payments Payment[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// Application Models
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String        @default("나의 자서전")
+  status      ProjectStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audioAssets AudioAsset[]
+  transcripts Transcript[]
+  story       ExtractedStory?
+  drafts      Draft[]
+  jobs        Job[]
+  payment     Payment?
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ProjectStatus {
+  DRAFT           // Initial state, collecting audio
+  UPLOADING       // Audio being uploaded
+  PROCESSING      // STT + extraction + writing in progress
+  COMPLETED       // Draft ready
+  FAILED          // Pipeline failed
+}
+
+model AudioAsset {
+  id          String   @id @default(cuid())
+  projectId   String
+  clipIndex   Int      // 1, 2, or 3
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int      // bytes
+  duration    Float?   // seconds
+  s3Key       String
+  s3Url       String?
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  transcript  Transcript?
+
+  @@unique([projectId, clipIndex])
+  @@index([projectId])
+}
+
+model Transcript {
+  id          String   @id @default(cuid())
+  audioAssetId String  @unique
+  projectId   String
+  text        String   @db.Text
+  segments    Json     // Array of { start: number, end: number, text: string }
+  language    String   @default("ko")
+  confidence  Float?
+  createdAt   DateTime @default(now())
+
+  audioAsset  AudioAsset @relation(fields: [audioAssetId], references: [id], onDelete: Cascade)
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ExtractedStory {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  data        Json     // Structured extraction: people, places, dates, themes, episodes, missing
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Draft {
+  id          String      @id @default(cuid())
+  projectId   String
+  version     Int         @default(1)
+  title       String
+  chapters    Json        // Array of chapter objects
+  content     String      @db.Text  // Full rendered content
+  wordCount   Int         @default(0)
+  pageCount   Int         @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([isActive])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  projectId   String
+  type        JobType
+  status      JobStatus @default(PENDING)
+  priority    Int       @default(0)
+  progress    Int       @default(0)  // 0-100
+  input       Json?
+  output      Json?
+  error       String?   @db.Text
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+}
+
+enum JobType {
+  STT           // Speech-to-text
+  EXTRACT       // Story extraction
+  WRITE         // Draft writing
+  EXPORT_PDF    // PDF generation
+  EXPORT_DOCX   // DOCX generation
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  projectId       String        @unique
+  stripePaymentId String?       @unique
+  amount          Int           // in cents/won
+  currency        String        @default("KRW")
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.1book1me.com)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(npm view:*)",
+      "Bash(npx prisma:*)",
+      "Bash(openssl rand:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(/usr/local/bin/docker compose:*)",
+      "Bash(/Applications/Docker.app/Contents/Resources/bin/docker compose up -d)",
+      "Bash(~/.docker/bin/docker compose:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run db:seed:*)",
+      "Bash(npx dotenv:*)",
+      "Bash(cat:*)",
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
