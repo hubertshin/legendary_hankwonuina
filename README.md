@@ -1,6 +1,6 @@
 # 한권의나 (1Book1Me)
 
-음성 녹음으로 쉽게 만드는 나만의 자서전. AI가 당신의 이야기를 아름다운 책으로 만들어드립니다.
+자서전 제1장 무료 제작 이벤트 - 음성 녹음으로 어린 시절 이야기를 남겨보세요.
 
 ## 주요 기능
 
@@ -17,23 +17,13 @@
 - **상태 업데이트**: PENDING → CONTACTED → PROCESSING → COMPLETED
 - **오디오 재생**: S3에서 직접 스트리밍하여 재생
 
-### 🤖 AI 자서전 생성 (기존 기능)
-- **STT 변환**: OpenAI Whisper를 활용한 음성-텍스트 변환
-- **AI 작성**: GPT-4o를 활용한 자동 자서전 작성
-- **실시간 처리 상태**: 처리 진행률 실시간 확인
-- **초안 편집**: 생성된 자서전 확인 및 섹션별 재생성
-- **내보내기**: PDF, DOCX 형식으로 다운로드
-- **결제 시스템**: 무료 미리보기 (2페이지) + 유료 전체 열람
-
 ## 기술 스택
 
 - **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes, Prisma ORM
 - **Database**: PostgreSQL
-- **Authentication**: NextAuth.js (Email Magic Link, Google OAuth)
-- **Storage**: AWS S3 (또는 S3 호환 서비스)
-- **Queue**: Redis + BullMQ
-- **AI**: OpenAI Whisper (STT), GPT-4o (분석/작성)
+- **Authentication**: NextAuth.js (Credentials Provider)
+- **Storage**: AWS S3 (또는 S3 호환 서비스 - MinIO)
 
 ## 시작하기
 
@@ -41,9 +31,7 @@
 
 - Node.js 18+
 - PostgreSQL
-- Redis
-- AWS S3 버킷 (또는 S3 호환 서비스)
-- OpenAI API 키
+- AWS S3 버킷 (또는 S3 호환 서비스 - MinIO 등)
 
 ### 설치 (팀원용 가이드)
 
@@ -72,25 +60,15 @@ DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/hankwon_uina"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here"  # openssl rand -base64 32로 생성
 
-# Google OAuth (선택사항)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
+# Admin Access
+ADMIN_EMAILS="admin@example.com"
 
-# Email (Resend)
-RESEND_API_KEY="your-resend-api-key"
-
-# AWS S3
-S3_REGION="ap-northeast-2"
+# AWS S3 (또는 MinIO)
+S3_REGION="us-east-1"
 S3_BUCKET="your-bucket-name"
 S3_ACCESS_KEY_ID="your-access-key"
 S3_SECRET_ACCESS_KEY="your-secret-key"
-S3_ENDPOINT=""  # S3 호환 서비스 사용 시
-
-# Redis
-REDIS_URL="redis://localhost:6379"
-
-# OpenAI
-OPENAI_API_KEY="your-openai-api-key"
+S3_ENDPOINT="http://localhost:9000"  # S3 호환 서비스(MinIO 등) 사용 시
 ```
 
 **중요**: 팀장에게 `.env` 파일 내용을 별도로 받으세요 (Slack, 이메일 등으로 안전하게 공유).
@@ -126,18 +104,6 @@ npm run dev
 ```
 
 브라우저에서 http://localhost:3000 으로 접속하여 확인하세요.
-
-#### 7단계: 워커 실행 (선택사항)
-
-AI 자서전 생성 기능을 사용하려면 별도 터미널에서:
-
-```bash
-# Redis가 실행 중인지 확인
-redis-cli ping  # PONG 응답 확인
-
-# 워커 시작
-npm run worker:dev
-```
 
 ### 협업 워크플로우
 
@@ -205,17 +171,13 @@ npm start
 |------|------|
 | `DATABASE_URL` | PostgreSQL 연결 문자열 |
 | `NEXTAUTH_URL` | 앱 URL (예: http://localhost:3000) |
-| `NEXTAUTH_SECRET` | NextAuth 시크릿 키 |
-| `GOOGLE_CLIENT_ID` | Google OAuth 클라이언트 ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth 시크릿 |
-| `RESEND_API_KEY` | Resend API 키 (이메일 발송) |
-| `S3_REGION` | AWS S3 리전 |
+| `NEXTAUTH_SECRET` | NextAuth 시크릿 키 (openssl rand -base64 32) |
+| `ADMIN_EMAILS` | 관리자 이메일 주소 (쉼표로 구분) |
+| `S3_REGION` | AWS S3 리전 또는 us-east-1 (MinIO) |
 | `S3_BUCKET` | S3 버킷 이름 |
-| `S3_ACCESS_KEY_ID` | AWS 액세스 키 |
-| `S3_SECRET_ACCESS_KEY` | AWS 시크릿 키 |
-| `S3_ENDPOINT` | S3 호환 서비스 엔드포인트 (선택) |
-| `REDIS_URL` | Redis 연결 문자열 |
-| `OPENAI_API_KEY` | OpenAI API 키 |
+| `S3_ACCESS_KEY_ID` | AWS 액세스 키 또는 MinIO 액세스 키 |
+| `S3_SECRET_ACCESS_KEY` | AWS 시크릿 키 또는 MinIO 시크릿 키 |
+| `S3_ENDPOINT` | S3 호환 서비스 엔드포인트 (MinIO: http://localhost:9000) |
 
 ## 프로젝트 구조
 
@@ -245,7 +207,6 @@ npm start
 │   │   ├── s3.ts              # AWS S3 유틸리티
 │   │   ├── validations.ts     # Zod 스키마
 │   │   └── event-utils.ts     # 이벤트 유틸리티
-│   ├── workers/               # BullMQ 워커 (AI 처리)
 │   └── types/                 # TypeScript 타입
 └── ...
 ```
@@ -269,48 +230,6 @@ Email: admin@example.com
 
 로그인 후 `/admin/submissions`에서 모든 이벤트 제출물을 관리할 수 있습니다.
 
-## 비용 예상
-
-### OpenAI API
-- Whisper: $0.006/분
-- GPT-4o: ~$0.03/1K 토큰
-
-### 예상 비용 (프로젝트당)
-- 10분 녹음 3개 = $0.18 (STT)
-- 분석 + 작성 = ~$0.50 (GPT-4o)
-- **총합**: 약 $0.68/프로젝트
-
-### 인프라
-- Vercel Pro: $20/월
-- PostgreSQL (Supabase/Neon): 무료 ~ $25/월
-- Redis (Upstash): 무료 ~ $10/월
-- S3: 사용량 기반
-
-## 배포
-
-### Vercel
-
-```bash
-# Vercel CLI 설치
-npm i -g vercel
-
-# 배포
-vercel --prod
-```
-
-### 워커 배포
-
-워커는 별도의 서버에서 실행해야 합니다:
-
-```bash
-# PM2 사용
-pm2 start npm --name "worker" -- run worker
-
-# 또는 Docker
-docker build -t hankwon-worker -f Dockerfile.worker .
-docker run -d hankwon-worker
-```
-
 ## 팀원 체크리스트
 
 새로 합류한 팀원이 확인해야 할 사항:
@@ -318,7 +237,6 @@ docker run -d hankwon-worker
 - [ ] Git 설치 확인: `git --version`
 - [ ] Node.js 설치 확인: `node --version` (18 이상)
 - [ ] PostgreSQL 설치 및 실행 확인
-- [ ] Redis 설치 및 실행 확인 (AI 기능 사용 시)
 - [ ] GitHub 리포지토리 클론 완료
 - [ ] `npm install` 실행 완료
 - [ ] `.env` 파일 생성 및 설정 완료 (팀장에게 받기)
@@ -327,7 +245,7 @@ docker run -d hankwon-worker
 - [ ] `npm run dev` 실행 및 http://localhost:3000 접속 확인
 - [ ] 이벤트 랜딩 페이지 동작 확인 (녹음 테스트)
 - [ ] 관리자 로그인 테스트 (admin@example.com)
-- [ ] GitHub 이슈 및 프로젝트 보드 확인
+- [ ] `/admin/submissions` 페이지 접속 확인
 
 ## 문제 해결
 
@@ -353,15 +271,6 @@ pg_isready
 
 # 또는
 brew services list | grep postgresql
-```
-
-### Redis 연결 오류
-```bash
-# Redis 실행 확인
-redis-cli ping  # PONG 응답이 나와야 함
-
-# macOS에서 Redis 시작
-brew services start redis
 ```
 
 ## 팀 협업 규칙
