@@ -27,10 +27,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user) {
+          // Check if email is in admin whitelist
+          const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
+          const isAdmin = adminEmails.includes(email);
+
           user = await prisma.user.create({
             data: {
               email,
               name: email.split("@")[0],
+              role: isAdmin ? "ADMIN" : "USER",
             },
           });
         }

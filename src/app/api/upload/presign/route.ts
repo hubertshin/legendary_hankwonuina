@@ -17,7 +17,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { projectId, clipIndex, filename, contentType, size } = body;
+    let { projectId, clipIndex, filename, contentType, size } = body;
+
+    // Normalize contentType (remove codec info if present)
+    if (contentType) {
+      contentType = contentType.split(';')[0];
+    }
 
     // Validate input
     audioUploadSchema.parse({

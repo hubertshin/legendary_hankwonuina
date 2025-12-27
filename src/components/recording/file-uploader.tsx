@@ -57,7 +57,7 @@ export function FileUploader({
     <div
       {...getRootProps()}
       className={cn(
-        "cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors",
+        "cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-colors w-full overflow-hidden",
         isDragActive
           ? "border-primary bg-primary/5"
           : "border-warm-200 hover:border-primary/50",
@@ -81,15 +81,15 @@ export function FileUploader({
         </div>
 
         {isDragActive ? (
-          <p className="text-lg font-medium text-primary">
+          <p className="text-base font-medium text-primary break-words">
             파일을 여기에 놓으세요
           </p>
         ) : (
           <>
-            <p className="mb-1 text-lg font-medium text-warm-800">
+            <p className="mb-1 text-base font-medium text-warm-800 break-words">
               파일을 드래그하거나 클릭하여 업로드
             </p>
-            <p className="text-sm text-warm-500">
+            <p className="text-sm text-warm-500 break-words">
               m4a, mp3, wav 지원 (최대 {formatFileSize(maxSize)})
             </p>
           </>

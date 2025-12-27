@@ -27,12 +27,29 @@ export function AudioRecorder({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
+  const durationRef = useRef<number>(0);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Sync duration to ref
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
@@ -57,20 +74,61 @@ export function AudioRecorder({
 
   const startRecording = async () => {
     try {
+      // Prevent multiple simultaneous recordings
+      if (isRecording) {
+        return;
+      }
+
+      // Cleanup any existing recording first
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        await audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
       // Set up audio analyser for visualization
       const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
       analyserRef.current = analyser;
 
+      // Try formats in order of preference for STT compatibility
+      const mimeTypes = [
+        'audio/mp4',           // .m4a - best for STT
+        'audio/webm;codecs=opus',
+        'audio/webm',
+      ];
+
+      let selectedMimeType = 'audio/webm'; // fallback
+      for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          selectedMimeType = type;
+          break;
+        }
+      }
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "audio/mp4",
+        mimeType: selectedMimeType,
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -86,18 +144,29 @@ export function AudioRecorder({
         const blob = new Blob(chunksRef.current, {
           type: mediaRecorder.mimeType,
         });
-        onRecordingComplete(blob, duration);
+
+        // Use durationRef to get the actual recorded duration
+        onRecordingComplete(blob, durationRef.current);
 
         // Cleanup
-        stream.getTracks().forEach((track) => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
         if (animationRef.current) {
           cancelAnimationFrame(animationRef.current);
+          animationRef.current = null;
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
         }
       };
 
       mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
       setDuration(0);
+      durationRef.current = 0;
 
       // Start timer
       timerRef.current = setInterval(() => {
@@ -113,14 +182,18 @@ export function AudioRecorder({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsPaused(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+    }
+    setIsRecording(false);
+    setIsPaused(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
   };
 
@@ -143,10 +216,10 @@ export function AudioRecorder({
   };
 
   return (
-    <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
-      <CardContent className="flex flex-col items-center py-8">
+    <Card className="border-2 border-dashed border-primary/30 bg-primary/5 w-full">
+      <CardContent className="flex flex-col items-center py-8 px-4 w-full overflow-hidden">
         {/* Recording indicator */}
-        <div className="relative mb-6">
+        <div className="relative mb-6 flex items-center justify-center" style={{ width: '120px', height: '120px' }}>
           <div
             className={cn(
               "flex h-24 w-24 items-center justify-center rounded-full transition-all",
@@ -159,7 +232,7 @@ export function AudioRecorder({
             style={
               isRecording && !isPaused
                 ? {
-                    transform: `scale(${1 + audioLevel * 0.2})`,
+                    transform: `scale(${1 + audioLevel * 0.15})`,
                   }
                 : undefined
             }
@@ -211,44 +284,44 @@ export function AudioRecorder({
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3">
+        <div className="flex gap-2 w-full justify-center max-w-sm">
           {!isRecording ? (
             <Button
-              size="lg"
+              size="default"
               onClick={startRecording}
               disabled={disabled}
-              className="gap-2"
+              className="gap-2 px-6"
             >
-              <Mic className="h-5 w-5" />
+              <Mic className="h-4 w-4" />
               녹음 시작
             </Button>
           ) : (
             <>
               <Button
-                size="lg"
+                size="default"
                 variant="outline"
                 onClick={pauseRecording}
-                className="gap-2"
+                className="gap-1.5 px-4"
               >
                 {isPaused ? (
                   <>
-                    <Play className="h-5 w-5" />
+                    <Play className="h-4 w-4" />
                     계속
                   </>
                 ) : (
                   <>
-                    <Pause className="h-5 w-5" />
+                    <Pause className="h-4 w-4" />
                     일시정지
                   </>
                 )}
               </Button>
               <Button
-                size="lg"
+                size="default"
                 variant="destructive"
                 onClick={stopRecording}
-                className="gap-2"
+                className="gap-1.5 px-4"
               >
-                <Square className="h-5 w-5" />
+                <Square className="h-4 w-4" />
                 녹음 완료
               </Button>
             </>

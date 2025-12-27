@@ -140,3 +140,15 @@ export function generateExportKey(
   const timestamp = Date.now();
   return `exports/${userId}/${projectId}/draft-${timestamp}.${format}`;
 }
+
+/**
+ * Generate S3 key for event audio files (no userId required)
+ */
+export function generateEventAudioKey(
+  sessionId: string,
+  clipIndex: number,
+  extension: string
+): string {
+  const timestamp = Date.now();
+  return `event/${sessionId}/clip-${clipIndex}-${timestamp}.${extension}`;
+}

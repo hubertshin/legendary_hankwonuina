@@ -20,7 +20,13 @@
       "Bash(cat:*)",
       "Bash(git init:*)",
       "Bash(gh auth:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

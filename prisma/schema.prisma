@@ -227,3 +227,34 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
+// Event Submission Model (No-Auth)
+model Submission {
+  id              String           @id @default(cuid())
+
+  // Personal Info
+  name            String
+  birthDate       DateTime
+  phone           String
+  subjectType     String           // 본인, 부모님, 형제자매, 친구, 기타
+  subjectOther    String?          // subjectType이 '기타'일 때
+
+  // Audio Files (JSON array)
+  audioFiles      Json             // [{s3Key, filename, duration, mimeType, size, clipIndex}]
+
+  // Metadata
+  status          SubmissionStatus @default(PENDING)
+  adminNotes      String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum SubmissionStatus {
+  PENDING     // 신규
+  CONTACTED   // 연락완료
+  PROCESSING  // 작업중
+  COMPLETED   // 완료
+}

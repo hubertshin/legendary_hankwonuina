@@ -7,7 +7,8 @@ import { ChevronDown, ChevronUp, Baby } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuestionPanelProps {
-  projectId: string;
+  projectId?: string;
+  sessionId?: string;
 }
 
 const QUESTIONS = [
@@ -61,17 +62,20 @@ const QUESTIONS = [
   },
 ];
 
-export function QuestionPanel({ projectId }: QuestionPanelProps) {
+export function QuestionPanel({ projectId, sessionId }: QuestionPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [checkedQuestions, setCheckedQuestions] = useState<Set<string>>(new Set());
 
+  // Use either projectId or sessionId for localStorage key
+  const storageKey = projectId ? `questions-${projectId}` : sessionId ? `questions-${sessionId}` : 'questions-default';
+
   // Load saved progress from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(`questions-${projectId}`);
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       setCheckedQuestions(new Set(JSON.parse(saved)));
     }
-  }, [projectId]);
+  }, [storageKey]);
 
   // Save progress to localStorage
   const toggleQuestion = (questionId: string) => {
@@ -82,7 +86,7 @@ export function QuestionPanel({ projectId }: QuestionPanelProps) {
       } else {
         newSet.add(questionId);
       }
-      localStorage.setItem(`questions-${projectId}`, JSON.stringify([...newSet]));
+      localStorage.setItem(storageKey, JSON.stringify([...newSet]));
       return newSet;
     });
   };
