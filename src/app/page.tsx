@@ -1,238 +1,633 @@
-import Link from "next/link";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Mic,
-  BookOpen,
-  Sparkles,
-  Download,
-  ArrowRight,
-  Check,
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { AudioRecorder } from "@/components/recording/audio-recorder";
+import { FileUploader } from "@/components/recording/file-uploader";
+import { QuestionPanel } from "@/components/recording/question-panel";
+import { ConfirmationModal } from "@/components/event/confirmation-modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, Upload, Play, Trash2, CheckCircle, Loader2 } from "lucide-react";
+import { generateSessionId, validateKoreanPhone, cleanPhoneNumber } from "@/lib/event-utils";
+import { useToast } from "@/components/ui/use-toast";
 
-export default function LandingPage() {
+interface AudioFile {
+  clipIndex: number;
+  s3Key: string;
+  filename: string;
+  duration: number;
+  mimeType: string;
+  size: number;
+  audioUrl?: string;
+}
+
+export default function EventLandingPage() {
+  const [sessionId, setSessionId] = useState("");
+  const [name, setName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [subjectType, setSubjectType] = useState("본인");
+  const [subjectOther, setSubjectOther] = useState("");
+  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [recorderKey, setRecorderKey] = useState(0);
+  const { toast } = useToast();
+
+  // Generate session ID on mount
+  useEffect(() => {
+    const id = generateSessionId();
+    setSessionId(id);
+  }, []);
+
+  // Handle audio recording complete
+  const handleRecordingComplete = async (blob: Blob, duration: number) => {
+    // Only ignore completely empty recordings
+    if (blob.size < 100) {
+      return;
+    }
+
+    if (audioFiles.length >= 3) {
+      toast({
+        title: "최대 3개까지 녹음 가능합니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Generate unique clipIndex using timestamp
+      const clipIndex = Date.now();
+
+      // Determine file extension from blob type
+      let extension = 'm4a'; // default for audio/mp4
+      if (blob.type.includes('webm')) {
+        extension = 'webm';
+      } else if (blob.type.includes('mp4') || blob.type.includes('m4a')) {
+        extension = 'm4a';
+      } else if (blob.type.includes('mpeg') || blob.type.includes('mp3')) {
+        extension = 'mp3';
+      }
+
+      const filename = `recording-${clipIndex}.${extension}`;
+
+      // Get presigned URL
+      const presignResponse = await fetch("/api/event/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename,
+          contentType: blob.type,
+          size: blob.size,
+          clipIndex,
+          sessionId,
+        }),
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const { uploadUrl, s3Key } = await presignResponse.json();
+
+      // Upload to S3
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": blob.type },
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      // Confirm upload
+      const confirmResponse = await fetch("/api/event/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ s3Key, duration }),
+      });
+
+      if (!confirmResponse.ok) {
+        throw new Error("Failed to confirm upload");
+      }
+
+      const { s3Url } = await confirmResponse.json();
+
+      // Add to audio files list
+      setAudioFiles((prev) => [
+        ...prev,
+        {
+          clipIndex,
+          s3Key,
+          filename,
+          duration,
+          mimeType: blob.type,
+          size: blob.size,
+          audioUrl: s3Url,
+        },
+      ]);
+
+      toast({
+        title: "녹음이 저장되었습니다",
+      });
+    } catch (error) {
+      console.error("Recording upload error:", error);
+      toast({
+        title: "녹음 저장 실패",
+        description: "다시 시도해주세요.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (file: File) => {
+    if (audioFiles.length >= 3) {
+      toast({
+        title: "최대 3개까지 업로드 가능합니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Generate unique clipIndex using timestamp
+      const clipIndex = Date.now();
+
+      // Get presigned URL
+      const presignResponse = await fetch("/api/event/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          clipIndex,
+          sessionId,
+        }),
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const { uploadUrl, s3Key } = await presignResponse.json();
+
+      // Upload to S3
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      // Confirm upload (duration unknown for uploaded files)
+      const confirmResponse = await fetch("/api/event/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ s3Key, duration: 0 }),
+      });
+
+      if (!confirmResponse.ok) {
+        throw new Error("Failed to confirm upload");
+      }
+
+      const { s3Url } = await confirmResponse.json();
+
+      // Add to audio files list
+      setAudioFiles((prev) => [
+        ...prev,
+        {
+          clipIndex,
+          s3Key,
+          filename: file.name,
+          duration: 0,
+          mimeType: file.type,
+          size: file.size,
+          audioUrl: s3Url,
+        },
+      ]);
+
+      toast({
+        title: "파일이 업로드되었습니다",
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+      toast({
+        title: "파일 업로드 실패",
+        description: "다시 시도해주세요.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete audio file
+  const handleDeleteAudio = (clipIndex: number) => {
+    setAudioFiles((prev) => prev.filter((f) => f.clipIndex !== clipIndex));
+    toast({
+      title: "삭제되었습니다",
+    });
+  };
+
+  // Format phone number with dashes
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Remove all non-numeric characters
+    const numbers = value.replace(/[^\d]/g, '');
+
+    // Limit to 11 digits
+    const limitedNumbers = numbers.slice(0, 11);
+
+    // Format with dashes
+    let formatted = limitedNumbers;
+    if (limitedNumbers.length > 3) {
+      if (limitedNumbers.length <= 7) {
+        formatted = `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+      } else {
+        formatted = `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 7)}-${limitedNumbers.slice(7)}`;
+      }
+    }
+
+    setPhone(formatted);
+  };
+
+  // Submit form
+  const handleSubmit = async () => {
+    // Validation
+    if (!name.trim()) {
+      toast({
+        title: "이름을 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!birthDate) {
+      toast({
+        title: "생년월일을 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateKoreanPhone(phone)) {
+      console.log("Phone validation failed:", phone);
+      console.log("Cleaned phone:", phone.replace(/[\s-]/g, ''));
+      toast({
+        title: "올바른 휴대폰 번호를 입력해주세요",
+        description: "010-1234-5678 형식으로 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (audioFiles.length === 0) {
+      toast({
+        title: "최소 1개 이상의 음성 파일을 녹음해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (subjectType === "기타" && !subjectOther.trim()) {
+      toast({
+        title: "자서전 주인공을 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/event/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          birthDate,
+          phone: cleanPhoneNumber(phone),
+          subjectType,
+          subjectOther: subjectType === "기타" ? subjectOther : undefined,
+          audioFiles,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit");
+      }
+
+      // Show confirmation modal
+      setShowConfirmation(true);
+
+      // Reset form
+      setName("");
+      setBirthDate("");
+      setPhone("");
+      setSubjectType("본인");
+      setSubjectOther("");
+      setAudioFiles([]);
+      setRecorderKey((prev) => prev + 1); // Reset recorder component
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast({
+        title: "제출 실패",
+        description: "다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-white overflow-x-hidden">
       {/* Header */}
       <header className="container mx-auto px-4 py-6">
-        <nav className="flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-warm-800">
-            한권의나
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/how-it-works"
-              className="text-warm-700 hover:text-warm-900"
-            >
-              이용 방법
-            </Link>
-            <Link href="/login">
-              <Button variant="outline">로그인</Button>
-            </Link>
-            <Link href="/login">
-              <Button>시작하기</Button>
-            </Link>
-          </div>
-        </nav>
+        <div className="text-2xl font-bold text-warm-800">한권의나</div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="mb-6 text-5xl font-bold leading-tight text-warm-900 md:text-6xl">
-          당신의 이야기를
-          <br />
-          <span className="text-primary">한 권의 책</span>으로
-        </h1>
-        <p className="mx-auto mb-10 max-w-2xl text-xl text-warm-600">
-          어린 시절의 추억을 음성으로 녹음하면, AI가 따뜻한 문체의 자서전으로
-          만들어드립니다. 소중한 기억을 영원히 간직하세요.
-        </p>
-        <div className="flex justify-center gap-4">
-          <Link href="/login">
-            <Button size="xl" className="gap-2">
-              무료로 시작하기 <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
-          <Link href="/how-it-works">
-            <Button size="xl" variant="outline">
-              자세히 알아보기
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="bg-white py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-12 text-center text-3xl font-bold text-warm-900">
-            어떻게 만들어지나요?
-          </h2>
-          <div className="grid gap-8 md:grid-cols-4">
-            <Card className="border-warm-200 bg-warm-50/50">
-              <CardContent className="pt-6 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Mic className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-warm-800">
-                  1. 음성 녹음
-                </h3>
-                <p className="text-warm-600">
-                  어린 시절 이야기를 가족에게 말하듯 편하게 녹음해주세요.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-warm-200 bg-warm-50/50">
-              <CardContent className="pt-6 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Sparkles className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-warm-800">
-                  2. AI 분석
-                </h3>
-                <p className="text-warm-600">
-                  AI가 녹음을 분석하여 핵심 이야기와 감정을 추출합니다.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-warm-200 bg-warm-50/50">
-              <CardContent className="pt-6 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <BookOpen className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-warm-800">
-                  3. 자서전 작성
-                </h3>
-                <p className="text-warm-600">
-                  따뜻한 문학적 문체로 약 10페이지의 자서전 초안을 생성합니다.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-warm-200 bg-warm-50/50">
-              <CardContent className="pt-6 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Download className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-warm-800">
-                  4. 다운로드
-                </h3>
-                <p className="text-warm-600">
-                  PDF와 DOCX 형식으로 다운로드하여 인쇄하거나 편집하세요.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid items-center gap-12 md:grid-cols-2">
-            <div>
-              <h2 className="mb-6 text-3xl font-bold text-warm-900">
-                왜 한권의나인가요?
-              </h2>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <Check className="mt-1 h-5 w-5 text-primary" />
-                  <div>
-                    <h4 className="font-semibold text-warm-800">
-                      가이드 질문 제공
-                    </h4>
-                    <p className="text-warm-600">
-                      어떤 이야기를 해야 할지 막막하지 않도록 체계적인 질문을
-                      제공합니다.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-1 h-5 w-5 text-primary" />
-                  <div>
-                    <h4 className="font-semibold text-warm-800">
-                      따뜻한 문학적 문체
-                    </h4>
-                    <p className="text-warm-600">
-                      녹음 내용에 충실하면서도 읽기 좋은 회고록 스타일로
-                      작성됩니다.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-1 h-5 w-5 text-primary" />
-                  <div>
-                    <h4 className="font-semibold text-warm-800">
-                      출처 표시 및 편집
-                    </h4>
-                    <p className="text-warm-600">
-                      각 문장의 원본 녹음 위치를 확인하고, 직접 수정할 수
-                      있습니다.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-1 h-5 w-5 text-primary" />
-                  <div>
-                    <h4 className="font-semibold text-warm-800">
-                      안전한 데이터 관리
-                    </h4>
-                    <p className="text-warm-600">
-                      소중한 녹음 파일과 자서전은 안전하게 보관됩니다.
-                    </p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div className="rounded-2xl bg-warm-100 p-8">
-              <blockquote className="font-serif text-xl italic text-warm-700">
-                &ldquo;엄마의 어린 시절 이야기를 책으로 만들어 드렸더니, 온
-                가족이 함께 읽으며 웃고 울었어요. 소중한 선물이 되었습니다.&rdquo;
-              </blockquote>
-              <p className="mt-4 text-warm-600">- 김○○, 서울</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-primary py-20 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold">
-            지금 바로 당신의 이야기를 시작하세요
-          </h2>
-          <p className="mx-auto mb-8 max-w-xl text-primary-foreground/80">
-            처음 2페이지는 무료로 미리보기할 수 있습니다. 마음에 드시면 전체
-            자서전을 받아보세요.
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
+        {/* Hero Section */}
+        <section className="text-center mb-16">
+          <h1 className="mb-6 text-4xl md:text-5xl font-bold leading-tight text-warm-900">
+            자서전 제1장<br />
+            무료제작 이벤트
+          </h1>
+          <p className="mx-auto mb-8 max-w-2xl text-xl text-warm-600">
+            당신의 이야기를 음성으로 남기면,<br />
+            '한권의나'가 자서전 제1장으로 완성해드립니다.
           </p>
-          <Link href="/login">
-            <Button size="xl" variant="secondary" className="gap-2">
-              무료로 시작하기 <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
-      </section>
+
+          <Card className="bg-warm-50/50 border-warm-200 mb-8">
+            <CardContent className="pt-6">
+              <ol className="text-left space-y-3 text-warm-700">
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+                    1
+                  </span>
+                  <span>신청자 정보 입력하기</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+                    2
+                  </span>
+                  <span>아래의 인터뷰 질문지를 살펴보면서 어린시절 이야기를 음성 녹음하기</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+                    3
+                  </span>
+                  <span>녹음 파일을 성공적으로 제출하기</span>
+                </li>
+              </ol>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Personal Info Form */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-warm-900 mb-6">
+            1. 신청자 정보 입력
+          </h2>
+          <Card>
+            <CardContent className="pt-6 space-y-6">
+              <div>
+                <Label htmlFor="name">이름 *</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="홍길동"
+                  className="mt-1.5"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="birthDate">생년월일 *</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="mt-1.5"
+                  lang="ko-KR"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phone">전화번호 *</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder="010-1234-5678"
+                  className="mt-1.5"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div>
+                <Label className="mb-3 block">자서전 주인공 *</Label>
+                <RadioGroup value={subjectType} onValueChange={setSubjectType}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="본인" id="subject-self" />
+                    <Label htmlFor="subject-self" className="font-normal cursor-pointer">본인</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="부모님" id="subject-parents" />
+                    <Label htmlFor="subject-parents" className="font-normal cursor-pointer">부모님</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="형제자매" id="subject-siblings" />
+                    <Label htmlFor="subject-siblings" className="font-normal cursor-pointer">형제자매</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="친구" id="subject-friend" />
+                    <Label htmlFor="subject-friend" className="font-normal cursor-pointer">친구</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="기타" id="subject-other" />
+                    <Label htmlFor="subject-other" className="font-normal cursor-pointer">기타</Label>
+                  </div>
+                </RadioGroup>
+
+                {subjectType === "기타" && (
+                  <Input
+                    value={subjectOther}
+                    onChange={(e) => setSubjectOther(e.target.value)}
+                    placeholder="관계를 입력해주세요"
+                    className="mt-3"
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Recording Guide */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-warm-900 mb-6">
+            2. 녹음 가이드
+          </h2>
+          <Card className="bg-warm-50/50 border-warm-200">
+            <CardContent className="pt-6">
+              <p className="text-warm-700 mb-4">
+                <strong className="text-warm-900">
+                  아래 예시 음성에서 들리는 것처럼 나의 어린시절 이야기를 가족에게 말해주듯 이야기하는 음성을 녹음해주세요.
+                </strong>
+              </p>
+
+              <p className="text-warm-600 text-sm mb-4">
+                (자서전의 주인공이 내가 아닌 다른 가족이라면 그 가족의 이야기를 녹음해주세요.)
+              </p>
+
+              <div className="mb-4">
+                <Label className="mb-2 block font-semibold">예시 음성 듣기</Label>
+                <div className="p-3 bg-white rounded-lg border">
+                  <audio controls controlsList="nodownload noplaybackrate" className="w-full">
+                    <source src="/audio/example.m4a" type="audio/mp4" />
+                    브라우저가 오디오 재생을 지원하지 않습니다.
+                  </audio>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm text-warm-600">
+                <p>• 한 파일당 3~10분 정도로 녹음해주세요.</p>
+                <p>• 조용한 공간에서 녹음해주세요.</p>
+                <p>• 말이 정리되지 않아도 괜찮습니다. 편안하게 대화하듯 녹음해주세요.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Recording Section */}
+        <section className="mb-12 overflow-hidden">
+          <h2 className="text-2xl font-bold text-warm-900 mb-6">
+            3. 음성 녹음하기 (최대 3개)
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-6 w-full overflow-hidden">
+            <div className="space-y-6 w-full min-w-0 overflow-hidden">
+              {/* Recording/Upload Tabs */}
+              <Card className="w-full overflow-hidden">
+                <CardContent className="pt-6 overflow-hidden">
+                  <Tabs defaultValue="record" className="w-full overflow-hidden">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="record">
+                        <Mic className="h-4 w-4 mr-2" />
+                        녹음하기
+                      </TabsTrigger>
+                      <TabsTrigger value="upload">
+                        <Upload className="h-4 w-4 mr-2" />
+                        파일 업로드
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="record" className="mt-4 overflow-hidden">
+                      <p className="text-sm text-warm-600 mb-4">
+                        이 버튼을 눌러 음성 녹음을 시작하세요.
+                      </p>
+                      <AudioRecorder
+                        key={recorderKey}
+                        onRecordingComplete={handleRecordingComplete}
+                        maxDuration={600}
+                        disabled={audioFiles.length >= 3}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="upload" className="mt-4 overflow-hidden">
+                      <FileUploader
+                        onFileSelect={handleFileUpload}
+                        disabled={audioFiles.length >= 3}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* Audio Files List */}
+              {audioFiles.length > 0 && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <h3 className="font-semibold mb-4">녹음된 파일 ({audioFiles.length}/3)</h3>
+                    <div className="space-y-3">
+                      {audioFiles.map((file) => (
+                        <div
+                          key={file.clipIndex}
+                          className="p-3 bg-warm-50 rounded-lg space-y-3"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">{file.filename}</p>
+                                {file.duration > 0 && (
+                                  <p className="text-xs text-warm-500">
+                                    {Math.floor(file.duration / 60)}:{String(Math.floor(file.duration % 60)).padStart(2, "0")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteAudio(file.clipIndex)}
+                              className="flex-shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                          {file.audioUrl && (
+                            <audio src={file.audioUrl} controls className="w-full h-10" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Question Panel */}
+            <QuestionPanel sessionId={sessionId} />
+          </div>
+        </section>
+
+        {/* Submit Button */}
+        <section className="text-center">
+          <Button
+            size="lg"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="text-lg px-12"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+            어린 시절 이야기 제출하기
+          </Button>
+        </section>
+      </div>
 
       {/* Footer */}
-      <footer className="border-t bg-warm-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="text-2xl font-bold text-warm-800">한권의나</div>
-            <div className="flex gap-6 text-warm-600">
-              <Link href="/terms" className="hover:text-warm-800">
-                이용약관
-              </Link>
-              <Link href="/privacy" className="hover:text-warm-800">
-                개인정보처리방침
-              </Link>
-              <Link href="/contact" className="hover:text-warm-800">
-                문의하기
-              </Link>
-            </div>
-            <p className="text-warm-500">
-              &copy; 2024 한권의나. All rights reserved.
-            </p>
-          </div>
+      <footer className="border-t bg-warm-50 py-12 mt-20">
+        <div className="container mx-auto px-4 text-center text-warm-600">
+          <p>&copy; 2024 한권의나. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        open={showConfirmation}
+        onOpenChange={setShowConfirmation}
+      />
     </div>
   );
 }
