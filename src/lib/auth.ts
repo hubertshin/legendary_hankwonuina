@@ -17,21 +17,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials?.email as string;
         if (!email) return null;
 
-        // 기존 사용자 찾기 또는 생성
+        // Check if email is in admin whitelist - ONLY admins can login
+        const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
+        if (!adminEmails.includes(email)) {
+          // Not an admin email - reject login
+          return null;
+        }
+
+        // Find or create admin user
         let user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user) {
-          // Check if email is in admin whitelist
-          const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
-          const isAdmin = adminEmails.includes(email);
-
+          // Create new admin user
           user = await prisma.user.create({
             data: {
               email,
               name: email.split("@")[0],
-              role: isAdmin ? "ADMIN" : "USER",
+              role: "ADMIN",
             },
           });
         }

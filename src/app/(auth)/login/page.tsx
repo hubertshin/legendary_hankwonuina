@@ -10,12 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Shield } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@example.com");
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleAdminSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     try {
       const result = await signIn("credentials", {
         email,
@@ -24,12 +26,14 @@ export default function LoginPage() {
 
       if (result?.error) {
         console.error("Sign in error:", result.error);
+        setError("로그인에 실패했습니다. 관리자 이메일을 확인해주세요.");
       } else {
         // Successful login - redirect to admin page
         window.location.href = "/admin/submissions";
       }
     } catch (error) {
       console.error("Sign in error:", error);
+      setError("로그인 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +72,11 @@ export default function LoginPage() {
                   required
                 />
               </div>
+              {error && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
               <Button type="submit" className="w-full gap-2" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
