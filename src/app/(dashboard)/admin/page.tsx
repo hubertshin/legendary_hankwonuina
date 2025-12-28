@@ -18,7 +18,6 @@ export default async function AdminPage() {
   const session = await auth();
 
   // Check admin role
-  // @ts-expect-error - role is added in session callback
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Allow: /favicon.ico
+Allow: /*.css$
+Allow: /*.js$
+
+Sitemap: https://www.1book1me.com/sitemap.xml

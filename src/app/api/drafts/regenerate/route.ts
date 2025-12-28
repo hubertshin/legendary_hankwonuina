@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     }
 
-    const chapters = draft.chapters as Chapter[];
+    const chapters = draft.chapters as unknown as Chapter[];
     const chapter = chapters[chapterIndex];
 
     if (!chapter) {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     await prisma.draft.update({
       where: { id: draftId },
       data: {
-        chapters,
+        chapters: chapters as any,
         content: totalContent,
         wordCount,
       },

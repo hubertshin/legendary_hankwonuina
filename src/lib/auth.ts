@@ -5,7 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as any,
   providers: [
     // 개발용 테스트 로그인 (production에서는 제거)
     Credentials({
@@ -62,16 +62,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        // @ts-expect-error - role exists on user
-        token.role = user.role;
+        token.role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        // @ts-expect-error - Add role to session
-        session.user.role = token.role;
+        (session.user as any).role = token.role;
       }
       return session;
     },
@@ -105,8 +103,7 @@ export async function requireAuth() {
 // Helper to require admin role
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  // @ts-expect-error - role is added in session callback
-  if (!user || user.role !== "ADMIN") {
+  if (!user || (user as any).role !== "ADMIN") {
     throw new Error("Forbidden");
   }
   return user;

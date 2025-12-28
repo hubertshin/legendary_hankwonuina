@@ -31,7 +31,7 @@ export const exportProcessor: Processor<ExportJobData> = async (
 
     await job.updateProgress(20);
 
-    const chapters = draft.chapters as Chapter[];
+    const chapters = draft.chapters as unknown as Chapter[];
 
     if (format === "docx") {
       // Generate DOCX

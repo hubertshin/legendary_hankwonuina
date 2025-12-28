@@ -10,9 +10,6 @@ function createRedisClient(): Redis {
   return new Redis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
-    retryDelayOnFailover: 100,
-    retryDelayOnClusterDown: 100,
-    retryDelayOnTryAgain: 100,
   });
 }
 

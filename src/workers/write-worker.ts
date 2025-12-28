@@ -106,7 +106,7 @@ export const writeProcessor: Processor<WriteJobData> = async (
         projectId,
         version: (lastDraft?.version || 0) + 1,
         title: draftData.title || "나의 자서전",
-        chapters: draftData.chapters,
+        chapters: draftData.chapters as any,
         content: totalContent,
         wordCount,
         pageCount,

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No draft found" }, { status: 404 });
     }
 
-    const chapters = draft.chapters as Chapter[];
+    const chapters = draft.chapters as unknown as Chapter[];
 
     if (format === "docx") {
       // Generate DOCX
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
       apiLogger.info({ projectId, format }, "DOCX exported");
 
-      return new NextResponse(buffer, {
+      return new NextResponse(new Uint8Array(buffer), {
         headers: {
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

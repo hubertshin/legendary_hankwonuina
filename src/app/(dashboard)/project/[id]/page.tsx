@@ -6,15 +6,17 @@ import { ProjectProcessingView } from "./processing-view";
 import { ProjectDraftView } from "./draft-view";
 
 interface ProjectPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  const { id } = await params;
+
   const project = await prisma.project.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       audioAssets: {
         orderBy: { clipIndex: "asc" },

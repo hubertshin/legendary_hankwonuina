@@ -17,7 +17,17 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await signIn("credentials", { email, callbackUrl: "/admin/submissions" });
+      const result = await signIn("credentials", {
+        email,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        console.error("Sign in error:", result.error);
+      } else {
+        // Successful login - redirect to admin page
+        window.location.href = "/admin/submissions";
+      }
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {

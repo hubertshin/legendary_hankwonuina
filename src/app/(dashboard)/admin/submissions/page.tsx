@@ -412,8 +412,8 @@ export default function SubmissionsPage() {
                       </TableCell>
                       <TableCell>{audioFiles.length}개</TableCell>
                       <TableCell>
-                        <Badge className={statusColors[submission.status]}>
-                          {statusLabels[submission.status]}
+                        <Badge className={statusColors[submission.status as keyof typeof statusColors]}>
+                          {statusLabels[submission.status as keyof typeof statusLabels]}
                         </Badge>
                       </TableCell>
                       <TableCell>

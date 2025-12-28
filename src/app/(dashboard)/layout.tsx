@@ -18,42 +18,43 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-warm-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="text-xl font-bold text-warm-800">
-              한권의나
+      <header className="bg-background/90 backdrop-blur-md border-b border-border sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <img src="/lovable-uploads/32760d4e-6290-41fc-aacf-1898f668c43e.png" alt="한권의나 로고" className="h-12 w-12" />
+              <span className="text-2xl font-bold text-foreground">한권의나</span>
             </Link>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt="Profile"
-                    className="h-8 w-8 rounded-full"
-                  />
-                ) : (
-                  <User className="h-4 w-4 text-primary" />
-                )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="Profile"
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <User className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+                <span className="hidden text-sm text-foreground md:block">
+                  {session.user.name || session.user.email}
+                </span>
               </div>
-              <span className="hidden text-sm text-warm-700 md:block">
-                {session.user.name || session.user.email}
-              </span>
-            </div>
 
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <Button variant="ghost" size="icon" type="submit">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </form>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/" });
+                }}
+              >
+                <Button variant="ghost" size="icon" type="submit">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
       </header>

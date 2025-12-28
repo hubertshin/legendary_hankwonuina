@@ -4,48 +4,74 @@
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
-    --foreground: 20 14.3% 4.1%;
+    --background: 44 33% 97%;
+    --foreground: 0 0% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
+    --card-foreground: 0 0% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
-    --primary: 24 70% 45%;
-    --primary-foreground: 60 9.1% 97.8%;
-    --secondary: 30 30% 92%;
-    --secondary-foreground: 24 10% 10%;
-    --muted: 30 20% 94%;
-    --muted-foreground: 25 5.3% 44.7%;
-    --accent: 30 30% 90%;
-    --accent-foreground: 24 10% 10%;
+    --popover-foreground: 0 0% 18%;
+    --primary: 40 29% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 22% 22%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 44 20% 90%;
+    --muted-foreground: 0 0% 35%;
+    --accent: 40 35% 70%;
+    --accent-foreground: 0 0% 18%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 9.1% 97.8%;
-    --border: 30 15% 88%;
-    --input: 30 15% 88%;
-    --ring: 24 70% 45%;
-    --radius: 0.75rem;
+    --destructive-foreground: 0 0% 100%;
+    --border: 44 20% 85%;
+    --input: 44 20% 85%;
+    --ring: 40 29% 61%;
+    --radius: 0.5rem;
+
+    /* Brand colors */
+    --brand-gold: 40 29% 61%;
+    --brand-gold-hover: 35 35% 55%;
+    --brand-dark: 210 22% 22%;
+    --brand-dark-foreground: 0 0% 100%;
+    --brand-text: 0 0% 18%;
+    --brand-text-light: 0 0% 35%;
+
+    /* Sidebar colors */
+    --sidebar-background: 44 33% 96%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-primary: 210 22% 22%;
+    --sidebar-primary-foreground: 44 33% 97%;
+    --sidebar-accent: 44 20% 92%;
+    --sidebar-accent-foreground: 0 0% 18%;
+    --sidebar-border: 44 15% 80%;
+    --sidebar-ring: 40 29% 61%;
   }
 
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 60 9.1% 97.8%;
-    --card: 20 14.3% 4.1%;
-    --card-foreground: 60 9.1% 97.8%;
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 60 9.1% 97.8%;
-    --primary: 24 70% 50%;
-    --primary-foreground: 60 9.1% 97.8%;
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 9.1% 97.8%;
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 60 9.1% 97.8%;
+    --background: 210 22% 22%;
+    --foreground: 44 33% 97%;
+    --card: 210 22% 22%;
+    --card-foreground: 44 33% 97%;
+    --popover: 210 22% 22%;
+    --popover-foreground: 44 33% 97%;
+    --primary: 44 33% 97%;
+    --primary-foreground: 210 22% 22%;
+    --secondary: 76 9% 32%;
+    --secondary-foreground: 44 33% 97%;
+    --muted: 76 9% 32%;
+    --muted-foreground: 44 15% 70%;
+    --accent: 76 9% 32%;
+    --accent-foreground: 44 33% 97%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 60 9.1% 97.8%;
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 24 70% 50%;
+    --destructive-foreground: 44 33% 97%;
+    --border: 76 9% 32%;
+    --input: 76 9% 32%;
+    --ring: 40 29% 61%;
+    --sidebar-background: 210 22% 15%;
+    --sidebar-foreground: 44 20% 85%;
+    --sidebar-primary: 40 29% 61%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 25%;
+    --sidebar-accent-foreground: 44 20% 85%;
+    --sidebar-border: 210 15% 25%;
+    --sidebar-ring: 40 29% 61%;
   }
 }
 
@@ -160,5 +186,39 @@
   .draft-content h2 {
     font-size: 14pt;
     page-break-after: avoid;
+  }
+}
+
+/* Film Strip Animation */
+@keyframes slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* 3D Flip Card Effect */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Mobile shake effect */
+@media (max-width: 768px) {
+  .animate-shake {
+    animation: shake 3s ease-in-out infinite;
   }
 }

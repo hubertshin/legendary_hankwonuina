@@ -177,8 +177,8 @@ export default function SubmissionDetailPage() {
               {new Date(submission.createdAt).toLocaleString("ko-KR")} 제출
             </p>
           </div>
-          <Badge className={statusColors[submission.status]}>
-            {statusLabels[submission.status]}
+          <Badge className={statusColors[submission.status as keyof typeof statusColors]}>
+            {statusLabels[submission.status as keyof typeof statusLabels]}
           </Badge>
         </div>
       </div>

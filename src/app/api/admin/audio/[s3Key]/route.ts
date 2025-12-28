@@ -8,7 +8,7 @@ import { getStreamUrl, getDownloadUrl } from "@/lib/s3";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { s3Key: string } }
+  { params }: { params: Promise<{ s3Key: string }> }
 ) {
   try {
     // Require admin authentication
@@ -19,7 +19,8 @@ export async function GET(
     const filename = searchParams.get("filename");
 
     // Decode s3Key (it's URL encoded)
-    const s3Key = decodeURIComponent(params.s3Key);
+    const { s3Key: s3KeyParam } = await params;
+    const s3Key = decodeURIComponent(s3KeyParam);
 
     let url: string;
     if (action === "download") {

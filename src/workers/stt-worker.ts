@@ -45,7 +45,7 @@ export const sttProcessor: Processor<STTJobData> = async (job: Job<STTJobData>) 
     await job.updateProgress(30);
 
     // Convert to File for OpenAI API
-    const audioFile = new File([audioBuffer], "audio.webm", {
+    const audioFile = new File([new Uint8Array(audioBuffer)], "audio.webm", {
       type: response.ContentType || "audio/webm",
     });
 
@@ -74,7 +74,7 @@ export const sttProcessor: Processor<STTJobData> = async (job: Job<STTJobData>) 
         audioAssetId,
         projectId,
         text: transcription.text,
-        segments: segments,
+        segments: segments as any,
         language: "ko",
       },
     });

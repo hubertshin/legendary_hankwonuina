@@ -290,7 +290,7 @@ export function AudioRecorder({
               size="default"
               onClick={startRecording}
               disabled={disabled}
-              className="gap-2 px-6"
+              className="gap-2 px-6 bg-[#43946C] hover:bg-[#367A5A] text-white"
             >
               <Mic className="h-4 w-4" />
               녹음 시작

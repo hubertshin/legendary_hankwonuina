@@ -9,14 +9,16 @@ import { updateSubmissionSchema } from "@/lib/validations";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Require admin authentication
     await requireAdmin();
 
+    const { id } = await params;
+
     const submission = await prisma.submission.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!submission) {
@@ -51,7 +53,7 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Require admin authentication
@@ -70,9 +72,11 @@ export async function PATCH(
 
     const { status, adminNotes } = result.data;
 
+    const { id } = await params;
+
     // Update submission
     const submission = await prisma.submission.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(status && { status }),
         ...(adminNotes !== undefined && { adminNotes }),
