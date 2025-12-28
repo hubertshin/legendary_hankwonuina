@@ -15,13 +15,17 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Determine home link based on user role
+  const isAdmin = (session.user as any).role === "ADMIN";
+  const homeLink = isAdmin ? "/admin" : "/";
+
   return (
     <div className="min-h-screen bg-warm-50">
       {/* Header */}
       <header className="bg-background/90 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <Link href={homeLink} className="flex items-center space-x-2">
               <img src="/lovable-uploads/32760d4e-6290-41fc-aacf-1898f668c43e.png" alt="한권의나 로고" className="h-12 w-12" />
               <span className="text-2xl font-bold text-foreground">한권의나</span>
             </Link>

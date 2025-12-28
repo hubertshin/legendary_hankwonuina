@@ -72,7 +72,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (new URL(url).origin === baseUrl) return url;
-      return baseUrl + "/dashboard";
+      // Default redirect to home page instead of dashboard
+      return baseUrl;
     },
   },
   session: {

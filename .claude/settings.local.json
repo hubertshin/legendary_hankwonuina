@@ -30,7 +30,10 @@
       "WebFetch(domain:github.com)",
       "Bash(npm run build:*)",
       "Bash(psql:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(head:*)",
+      "Bash(git fetch:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_fDAFO1rz4oXC@ep-red-glade-a19vhul7-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require\" npx prisma db push:*)"
     ]
   }
 }
