@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { getStreamUrl, getDownloadUrl } from "@/lib/s3";
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * GET /api/admin/audio/[s3Key]?action=stream|download
  * Get presigned URL for audio file (ADMIN only)
