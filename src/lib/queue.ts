@@ -3,18 +3,22 @@ import Redis from "ioredis";
 
 // Create a dedicated connection for BullMQ
 function createConnection(): Redis {
-  // Skip Redis connection during build time
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
+  // Skip Redis connection during build time or if no URL provided
+  if (
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    typeof window !== 'undefined' ||
+    !process.env.REDIS_URL
+  ) {
     // Return a mock Redis instance for build time
-    return {} as Redis;
+    return {
+      status: 'ready',
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      quit: () => Promise.resolve(),
+    } as unknown as Redis;
   }
 
   const redisUrl = process.env.REDIS_URL;
-
-  if (!redisUrl) {
-    console.warn("REDIS_URL not provided, using mock connection");
-    return {} as Redis;
-  }
 
   return new Redis(redisUrl, {
     maxRetriesPerRequest: null,

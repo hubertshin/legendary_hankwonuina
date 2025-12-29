@@ -5,8 +5,11 @@ const globalForRedis = globalThis as unknown as {
 };
 
 function createRedisClient(): Redis | null {
-  // Skip Redis connection during build time
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
+  // Skip Redis connection during build time or in browser
+  if (
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    typeof window !== 'undefined'
+  ) {
     return null;
   }
 
@@ -19,11 +22,21 @@ function createRedisClient(): Redis | null {
   }
 
   try {
-    return new Redis(redisUrl, {
+    const client = new Redis(redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
       lazyConnect: true, // Don't connect immediately
+      retryStrategy: () => null, // Don't retry on connection failure
     });
+
+    // Suppress connection errors during build
+    client.on('error', (err) => {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('Redis connection error (non-fatal):', err.message);
+      }
+    });
+
+    return client;
   } catch (error) {
     console.error("Failed to create Redis client:", error);
     return null;
