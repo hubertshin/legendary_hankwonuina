@@ -14,26 +14,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string;
-        console.log("[Auth] Login attempt with email:", email);
-
-        if (!email) {
-          console.log("[Auth] No email provided");
-          return null;
-        }
-
-        // Check if email is in admin whitelist - ONLY admins can login
-        const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
-        console.log("[Auth] Admin emails:", adminEmails);
-        console.log("[Auth] Email check:", email, "in", adminEmails, "=", adminEmails.includes(email));
-
-        if (!adminEmails.includes(email)) {
-          // Not an admin email - reject login
-          console.log("[Auth] Email not in admin list - rejecting");
-          return null;
-        }
-
         try {
+          const email = credentials?.email as string;
+          console.log("[Auth] Login attempt with email:", email);
+
+          if (!email) {
+            console.log("[Auth] No email provided");
+            throw new Error("이메일을 입력해주세요");
+          }
+
+          // Check if email is in admin whitelist - ONLY admins can login
+          const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
+          console.log("[Auth] Admin emails:", adminEmails);
+          console.log("[Auth] Email check:", email, "in", adminEmails, "=", adminEmails.includes(email));
+
+          if (!adminEmails.includes(email)) {
+            // Not an admin email - reject login
+            console.log("[Auth] Email not in admin list - rejecting");
+            throw new Error("관리자 권한이 없습니다");
+          }
+
           // Find or create admin user
           let user = await prisma.user.findUnique({
             where: { email },
@@ -59,8 +59,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: user.role,
           };
         } catch (error) {
-          console.error("[Auth] Database error:", error);
-          return null;
+          console.error("[Auth] Error during authorization:", error);
+          throw error;
         }
       },
     }),
