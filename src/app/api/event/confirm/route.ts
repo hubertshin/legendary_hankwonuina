@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { existsSync } from "fs";
-import path from "path";
+import { fileExists, getStreamUrl } from "@/lib/s3";
 
 const confirmSchema = z.object({
   s3Key: z.string().min(1),
@@ -11,7 +10,7 @@ const confirmSchema = z.object({
 /**
  * POST /api/event/confirm
  * Confirm audio file upload and get streaming URL (NO AUTH required)
- * Using local filesystem instead of S3 for development
+ * Now using S3 for production compatibility
  */
 export async function POST(request: Request) {
   try {
@@ -28,19 +27,17 @@ export async function POST(request: Request) {
 
     const { s3Key, duration } = result.data;
 
-    // Check if file exists locally
-    const filePath = path.join(process.cwd(), "public", "uploads", s3Key);
-    const exists = existsSync(filePath);
-
+    // Check if file exists in S3
+    const exists = await fileExists(s3Key);
     if (!exists) {
       return NextResponse.json(
-        { error: "File not found" },
+        { error: "File not found in S3" },
         { status: 404 }
       );
     }
 
-    // Return local URL instead of S3 URL
-    const s3Url = `/uploads/${s3Key}`;
+    // Generate streaming URL (valid for 24 hours)
+    const s3Url = await getStreamUrl(s3Key, 86400);
 
     return NextResponse.json({
       s3Key,
