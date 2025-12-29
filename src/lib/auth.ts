@@ -12,18 +12,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         const email = credentials?.email as string;
-        console.log("[Auth] Login attempt:", email);
+        console.log("[Auth] ===== LOGIN ATTEMPT =====");
+        console.log("[Auth] Email:", email);
+        console.log("[Auth] ADMIN_EMAILS env:", process.env.ADMIN_EMAILS);
 
         if (!email) {
-          console.log("[Auth] No email");
+          console.log("[Auth] ERROR: No email provided");
           return null;
         }
 
         const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
-        console.log("[Auth] Admin emails:", adminEmails);
+        console.log("[Auth] Parsed admin emails:", JSON.stringify(adminEmails));
+        console.log("[Auth] Email to check:", JSON.stringify(email));
+        console.log("[Auth] Includes check:", adminEmails.includes(email));
 
         if (!adminEmails.includes(email)) {
-          console.log("[Auth] Not admin");
+          console.log("[Auth] ERROR: Email not in admin list");
+          console.log("[Auth] Admin list length:", adminEmails.length);
+          console.log("[Auth] First admin email:", adminEmails[0]);
           return null;
         }
 
