@@ -1,15 +1,14 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as any,
   providers: [
-    // 개발용 테스트 로그인 (production에서는 제거)
+    // Admin login with email
     Credentials({
-      name: "Test Login",
+      name: "Admin Login",
       credentials: {
         email: { label: "Email", type: "email" },
       },
@@ -47,10 +46,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
         };
       },
-    }),
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
   pages: {
