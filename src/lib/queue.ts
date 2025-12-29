@@ -1,24 +1,19 @@
 import { Queue, Worker, Job as BullJob, QueueEvents } from "bullmq";
 import Redis from "ioredis";
 
+// Check if we should skip queue initialization
+const shouldSkipQueue =
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  typeof window !== 'undefined' ||
+  !process.env.REDIS_URL;
+
 // Create a dedicated connection for BullMQ
-function createConnection(): Redis {
-  // Skip Redis connection during build time or if no URL provided
-  if (
-    process.env.NEXT_PHASE === 'phase-production-build' ||
-    typeof window !== 'undefined' ||
-    !process.env.REDIS_URL
-  ) {
-    // Return a mock Redis instance for build time
-    return {
-      status: 'ready',
-      connect: () => Promise.resolve(),
-      disconnect: () => Promise.resolve(),
-      quit: () => Promise.resolve(),
-    } as unknown as Redis;
+function createConnection(): Redis | null {
+  if (shouldSkipQueue) {
+    return null;
   }
 
-  const redisUrl = process.env.REDIS_URL;
+  const redisUrl = process.env.REDIS_URL!;
 
   return new Redis(redisUrl, {
     maxRetriesPerRequest: null,
@@ -58,9 +53,18 @@ export interface ExportJobData {
   format: "pdf" | "docx";
 }
 
-// Create queues
-export const sttQueue = new Queue<STTJobData>(QUEUE_NAMES.STT, {
-  connection: createConnection(),
+// Create queues (only if Redis is available)
+function createQueue<T>(name: string, options: any): Queue<T> | null {
+  if (shouldSkipQueue) {
+    return null;
+  }
+  return new Queue<T>(name, {
+    connection: createConnection()!,
+    ...options,
+  });
+}
+
+export const sttQueue = createQueue<STTJobData>(QUEUE_NAMES.STT, {
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -72,8 +76,7 @@ export const sttQueue = new Queue<STTJobData>(QUEUE_NAMES.STT, {
   },
 });
 
-export const extractQueue = new Queue<ExtractJobData>(QUEUE_NAMES.EXTRACT, {
-  connection: createConnection(),
+export const extractQueue = createQueue<ExtractJobData>(QUEUE_NAMES.EXTRACT, {
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -85,8 +88,7 @@ export const extractQueue = new Queue<ExtractJobData>(QUEUE_NAMES.EXTRACT, {
   },
 });
 
-export const writeQueue = new Queue<WriteJobData>(QUEUE_NAMES.WRITE, {
-  connection: createConnection(),
+export const writeQueue = createQueue<WriteJobData>(QUEUE_NAMES.WRITE, {
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -98,8 +100,7 @@ export const writeQueue = new Queue<WriteJobData>(QUEUE_NAMES.WRITE, {
   },
 });
 
-export const exportQueue = new Queue<ExportJobData>(QUEUE_NAMES.EXPORT, {
-  connection: createConnection(),
+export const exportQueue = createQueue<ExportJobData>(QUEUE_NAMES.EXPORT, {
   defaultJobOptions: {
     attempts: 2,
     backoff: {
@@ -113,24 +114,39 @@ export const exportQueue = new Queue<ExportJobData>(QUEUE_NAMES.EXPORT, {
 
 // Helper to add jobs
 export async function addSTTJob(data: STTJobData, priority = 0) {
+  if (!sttQueue) {
+    throw new Error("Queue not available - Redis not configured");
+  }
   return sttQueue.add("transcribe", data, { priority });
 }
 
 export async function addExtractJob(data: ExtractJobData, priority = 0) {
+  if (!extractQueue) {
+    throw new Error("Queue not available - Redis not configured");
+  }
   return extractQueue.add("extract", data, { priority });
 }
 
 export async function addWriteJob(data: WriteJobData, priority = 0) {
+  if (!writeQueue) {
+    throw new Error("Queue not available - Redis not configured");
+  }
   return writeQueue.add("write", data, { priority });
 }
 
 export async function addExportJob(data: ExportJobData, priority = 0) {
+  if (!exportQueue) {
+    throw new Error("Queue not available - Redis not configured");
+  }
   return exportQueue.add("export", data, { priority });
 }
 
 // Get queue events for monitoring
-export function createQueueEvents(queueName: string): QueueEvents {
+export function createQueueEvents(queueName: string): QueueEvents | null {
+  if (shouldSkipQueue) {
+    return null;
+  }
   return new QueueEvents(queueName, {
-    connection: createConnection(),
+    connection: createConnection()!,
   });
 }
