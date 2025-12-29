@@ -93,17 +93,33 @@ export default function EventLandingPage() {
         throw new Error("Failed to get upload URL");
       }
 
-      const { uploadUrl, s3Key } = await presignResponse.json();
+      const { uploadUrl, s3Key, useLocalUpload } = await presignResponse.json();
 
-      // Upload to S3
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": blob.type },
-        body: blob,
-      });
+      // Upload file (either to S3 or local filesystem)
+      let uploadResponse;
+      if (useLocalUpload) {
+        // Local upload using FormData
+        const formData = new FormData();
+        formData.append("file", blob, filename);
+        formData.append("s3Key", s3Key);
+
+        uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // S3 upload using PUT
+        uploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": blob.type },
+          body: blob,
+        });
+      }
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+        const errorText = await uploadResponse.text();
+        console.error("Upload failed:", uploadResponse.status, errorText);
+        throw new Error(`Failed to upload file: ${uploadResponse.status} - ${errorText}`);
       }
 
       // Confirm upload
@@ -177,17 +193,33 @@ export default function EventLandingPage() {
         throw new Error("Failed to get upload URL");
       }
 
-      const { uploadUrl, s3Key } = await presignResponse.json();
+      const { uploadUrl, s3Key, useLocalUpload } = await presignResponse.json();
 
-      // Upload to S3
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+      // Upload file (either to S3 or local filesystem)
+      let uploadResponse;
+      if (useLocalUpload) {
+        // Local upload using FormData
+        const formData = new FormData();
+        formData.append("file", file, file.name);
+        formData.append("s3Key", s3Key);
+
+        uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // S3 upload using PUT
+        uploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+      }
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+        const errorText = await uploadResponse.text();
+        console.error("Upload failed:", uploadResponse.status, errorText);
+        throw new Error(`Failed to upload file: ${uploadResponse.status} - ${errorText}`);
       }
 
       // Confirm upload (duration unknown for uploaded files)

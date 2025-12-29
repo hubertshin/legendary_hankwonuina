@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { eventAudioUploadSchema } from "@/lib/validations";
-import { getUploadUrl, generateEventAudioKey } from "@/lib/s3";
+import { generateEventAudioKey } from "@/lib/s3";
 
 /**
  * POST /api/event/presign
- * Generate presigned S3 upload URL for event audio files (NO AUTH required)
+ * Generate upload info for event audio files (NO AUTH required)
+ * Using local filesystem instead of S3 for development
  */
 export async function POST(request: Request) {
   try {
@@ -31,20 +32,17 @@ export async function POST(request: Request) {
     // Extract file extension
     const extension = filename.split(".").pop() || "webm";
 
-    // Generate S3 key
+    // Generate S3 key (used as file path)
     const s3Key = generateEventAudioKey(sessionId, clipIndex, extension);
 
-    // Get presigned upload URL (valid for 1 hour)
-    const uploadUrl = await getUploadUrl({
-      key: s3Key,
-      contentType,
-      expiresIn: 3600,
-    });
+    // Return local upload endpoint instead of S3 presigned URL
+    const uploadUrl = "/api/event/upload";
 
     return NextResponse.json({
       uploadUrl,
       s3Key,
       clipIndex,
+      useLocalUpload: true, // Flag to indicate local upload
     });
   } catch (error) {
     console.error("Event presign error:", error);
