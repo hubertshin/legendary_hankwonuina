@@ -3,10 +3,23 @@ import Redis from "ioredis";
 
 // Create a dedicated connection for BullMQ
 function createConnection(): Redis {
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  // Skip Redis connection during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    // Return a mock Redis instance for build time
+    return {} as Redis;
+  }
+
+  const redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    console.warn("REDIS_URL not provided, using mock connection");
+    return {} as Redis;
+  }
+
   return new Redis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    lazyConnect: true,
   });
 }
 
