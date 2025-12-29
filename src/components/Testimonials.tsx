@@ -78,17 +78,16 @@ export const Testimonials = () => {
         </div>
 
         <div className="flex justify-center items-center w-full">
-          <button onClick={() => handleLinkClick('/samples')}>
-            <Button 
-              size="lg" 
-              className="relative bg-gradient-to-r from-[#C1A875] via-[#D4B87E] to-[#C1A875] hover:from-[#B5965E] hover:via-[#C9A86B] hover:to-[#B5965E] text-white text-lg px-10 py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 ease-out border-2 border-[#C1A875]/30 hover:border-[#B5965E]/50 group overflow-hidden w-auto"
-            >
-              <span className="relative z-10 flex items-center justify-center">
-                제작 샘플 읽어보기
-                <ArrowRight className="ml-3 h-6 w-6 transform group-hover:translate-x-1 transition-transform duration-300" />
-              </span>
-            </Button>
-          </button>
+          <Button
+            size="lg"
+            onClick={() => handleLinkClick('/samples')}
+            className="relative bg-gradient-to-r from-[#C1A875] via-[#D4B87E] to-[#C1A875] hover:from-[#B5965E] hover:via-[#C9A86B] hover:to-[#B5965E] text-white text-lg px-10 py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 ease-out border-2 border-[#C1A875]/30 hover:border-[#B5965E]/50 group overflow-hidden w-auto"
+          >
+            <span className="relative z-10 flex items-center justify-center">
+              제작 샘플 읽어보기
+              <ArrowRight className="ml-3 h-6 w-6 transform group-hover:translate-x-1 transition-transform duration-300" />
+            </span>
+          </Button>
         </div>
       </div>
     </section>

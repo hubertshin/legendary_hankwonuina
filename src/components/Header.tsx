@@ -31,9 +31,7 @@ export const Header = () => {
             <button onClick={() => handleLinkClick('/samples')} className="text-foreground hover:text-secondary transition-colors">자서전 샘플</button>
             <button onClick={() => handleLinkClick('/pricing')} className="text-foreground hover:text-secondary transition-colors">서비스 가격</button>
             <button onClick={() => handleLinkClick('/chapter1-event')} className="text-foreground hover:text-secondary transition-colors">무료 이벤트</button>
-            <button onClick={() => handleLinkClick('/consultation')}>
-              <Button className="bg-brand-gold hover:bg-brand-gold-hover text-white">상담하기</Button>
-            </button>
+            <Button onClick={() => handleLinkClick('/consultation')} className="bg-brand-gold hover:bg-brand-gold-hover text-white">상담하기</Button>
           </nav>
 
           <button 
@@ -52,9 +50,7 @@ export const Header = () => {
               <button onClick={() => handleLinkClick('/samples')} className="text-foreground hover:text-secondary transition-colors text-left">자서전 샘플</button>
               <button onClick={() => handleLinkClick('/pricing')} className="text-foreground hover:text-secondary transition-colors text-left">서비스 가격</button>
               <button onClick={() => handleLinkClick('/chapter1-event')} className="text-foreground hover:text-secondary transition-colors text-left">무료 이벤트</button>
-              <button onClick={() => handleLinkClick('/consultation')}>
-                <Button className="bg-brand-gold hover:bg-brand-gold-hover text-white w-full">상담하기</Button>
-              </button>
+              <Button onClick={() => handleLinkClick('/consultation')} className="bg-brand-gold hover:bg-brand-gold-hover text-white w-full">상담하기</Button>
             </div>
           </nav>
         )}
