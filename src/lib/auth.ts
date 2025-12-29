@@ -5,7 +5,8 @@ import Google from "next-auth/providers/google";
 import { prisma } from "./db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
+  // Note: Credentials provider doesn't work with database adapters
+  // adapter: PrismaAdapter(prisma) as any,
   providers: [
     // Admin login with email
     Credentials({
