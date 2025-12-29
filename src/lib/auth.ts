@@ -15,37 +15,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         const email = credentials?.email as string;
-        if (!email) return null;
+        console.log("[Auth] Login attempt with email:", email);
 
-        // Check if email is in admin whitelist - ONLY admins can login
-        const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
-        if (!adminEmails.includes(email)) {
-          // Not an admin email - reject login
+        if (!email) {
+          console.log("[Auth] No email provided");
           return null;
         }
 
-        // Find or create admin user
-        let user = await prisma.user.findUnique({
-          where: { email },
-        });
+        // Check if email is in admin whitelist - ONLY admins can login
+        const adminEmails = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim()) || [];
+        console.log("[Auth] Admin emails:", adminEmails);
+        console.log("[Auth] Email check:", email, "in", adminEmails, "=", adminEmails.includes(email));
 
-        if (!user) {
-          // Create new admin user
-          user = await prisma.user.create({
-            data: {
-              email,
-              name: email.split("@")[0],
-              role: "ADMIN",
-            },
-          });
+        if (!adminEmails.includes(email)) {
+          // Not an admin email - reject login
+          console.log("[Auth] Email not in admin list - rejecting");
+          return null;
         }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
+        try {
+          // Find or create admin user
+          let user = await prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (!user) {
+            // Create new admin user
+            console.log("[Auth] Creating new admin user");
+            user = await prisma.user.create({
+              data: {
+                email,
+                name: email.split("@")[0],
+                role: "ADMIN",
+              },
+            });
+          }
+
+          console.log("[Auth] Login successful for:", user.email);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("[Auth] Database error:", error);
+          return null;
+        }
       },
     }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
