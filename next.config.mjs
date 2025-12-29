@@ -19,7 +19,6 @@ const nextConfig = {
       bufferutil: "commonjs bufferutil",
     });
 
-    // canvas 모듈을 빈 모듈로 대체 (react-pdf가 브라우저에서 canvas를 요구하지만 실제로는 필요 없음)
     config.resolve.fallback = {
       ...config.resolve.fallback,
       canvas: false,

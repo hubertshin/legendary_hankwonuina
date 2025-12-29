@@ -209,7 +209,7 @@ const SamplesPage = () => {
                 )}
               </Document>
 
-              {numPages > 0 && (
+              {numPages > 0 &&  (
                 <div className="flex items-center justify-center gap-6 mt-[1cm]">
                   <Button
                     variant="outline"

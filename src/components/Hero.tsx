@@ -19,7 +19,6 @@ export const Hero = () => {
     "/lovable-uploads/0bf6f1b6-858d-4b48-83be-10e2e9843841.png"
   ];
 
-  // 이미지 preload
   useEffect(() => {
     const preloadImages = () => {
       heroImages.forEach((src) => {
