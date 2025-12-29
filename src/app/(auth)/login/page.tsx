@@ -18,21 +18,36 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    console.log("[Login Page] Attempting login with email:", email);
+
     try {
       const result = await signIn("credentials", {
         email,
         redirect: false,
       });
 
+      console.log("[Login Page] Sign in result:", result);
+
       if (result?.error) {
-        console.error("Sign in error:", result.error);
-        setError("로그인에 실패했습니다. 관리자 이메일을 확인해주세요.");
-      } else {
+        console.error("[Login Page] Sign in error:", result.error);
+
+        if (result.error === "CredentialsSignin") {
+          setError("이메일이 관리자 목록에 없습니다. 관리자에게 문의하세요.");
+        } else if (result.error === "Configuration") {
+          setError("인증 설정 오류입니다. 관리자에게 문의하세요.");
+        } else {
+          setError(`로그인 실패: ${result.error}`);
+        }
+      } else if (result?.ok) {
+        console.log("[Login Page] Login successful, redirecting...");
         // Successful login - redirect to admin page
         window.location.href = "/admin/submissions";
+      } else {
+        setError("로그인에 실패했습니다. 다시 시도해주세요.");
       }
     } catch (error) {
-      console.error("Sign in error:", error);
+      console.error("[Login Page] Exception during sign in:", error);
       setError("로그인 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
