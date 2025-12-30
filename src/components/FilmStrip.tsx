@@ -82,17 +82,17 @@ export const FilmStrip = () => {
               <div
                 key={index}
                 className="flex-shrink-0 relative"
-                style={{ width: "800px", height: "400px" }} // 적절한 높이로 설정
+                style={{ width: "auto", height: "500px" }} // 높이를 늘리고 너비는 자동으로
               >
                 <img
                   src={filmStrip.src}
                   alt={filmStrip.alt}
-                  className={`w-full h-full object-cover transition-all duration-700 hover:brightness-110 hover:contrast-110 ${
+                  className={`h-full w-auto object-contain transition-all duration-700 hover:brightness-110 hover:contrast-110 ${
                     isLoaded ? 'opacity-100' : 'opacity-50'
                   }`}
                   loading="eager"
                   fetchPriority="high"
-                  style={{ 
+                  style={{
                     filter: "sepia(20%) contrast(1.1) brightness(0.95)",
                     imageRendering: "auto"
                   }}
