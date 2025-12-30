@@ -8,11 +8,11 @@ const filmStrips = [
     alt: "추억의 순간들 1"
   },
   {
-    src: "/lovable-uploads/56aace2a-d18b-4e06-812f-16290f3176b5.png",
+    src: "/lovable-uploads/1.png",
     alt: "추억의 순간들 2"
   },
   {
-    src: "/lovable-uploads/d6588295-e649-4d25-b0c1-ae3dccd311d1.png",
+    src: "/lovable-uploads/2.png",
     alt: "추억의 순간들 3"
   },
   {
