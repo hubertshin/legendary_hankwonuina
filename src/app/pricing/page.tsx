@@ -14,16 +14,22 @@ const Pricing = () => {
     window.scrollTo(0, 0);
   };
   const comparisonItems = [
-    { icon: FileText, label: "페이지 수", standard: "약 100페이지", premium: "약 200페이지" },
-    { icon: FileImage, label: "사진 삽입", standard: "최대 30장", premium: "최대 60장" },
-    { icon: Edit3, label: "전문 집필진 참여", standard: "포함", premium: "포함" },
-    { icon: Clock, label: "작업 기간", standard: "약 1개월", premium: "약 1개월" },
-    { icon: FileText, label: "인쇄용 PDF 파일", standard: "미제공", premium: "제공", highlight: true },
-    { icon: Palette, label: "일러스트 이미지 추가", mobileLabel: "일러스트 이미지 추가", standard: "미포함", premium: "포함 (각 장당 1컷)", mobilePremium: "포함<br/><span class='text-sm'>(각 장당 1컷)</span>", highlight: true },
-    { icon: Package, label: "선물용 책 포장", standard: "미포함", premium: "포함 (북케이스 포장 10권)", mobilePremium: "포함<br/><span class='text-sm'>(북케이스 포장 10권)</span>", highlight: true }
+    { icon: FileText, label: "페이지 수", mini: "약 50페이지", standard: "약 100페이지", premium: "약 200페이지" },
+    { icon: FileImage, label: "사진 삽입", mini: "최대 10장", standard: "최대 30장", premium: "최대 60장" },
+    { icon: Edit3, label: "전문 집필진 참여", mini: "포함", standard: "포함", premium: "포함" },
+    { icon: Clock, label: "작업 기간", mini: "약 3주", standard: "약 1개월", premium: "약 1개월" },
+    { icon: FileText, label: "인쇄용 PDF 파일", mini: "미제공", standard: "미제공", premium: "제공", highlight: true },
+    { icon: Palette, label: "일러스트 이미지 추가", mobileLabel: "일러스트 이미지 추가", mini: "미포함", standard: "미포함", premium: "포함 (각 장당 1컷)", mobilePremium: "포함<br/><span class='text-sm'>(각 장당 1컷)</span>", highlight: true },
+    { icon: Package, label: "선물용 책 포장", mini: "미포함", standard: "미포함", premium: "포함 (북케이스 포장 10권)", mobilePremium: "포함<br/><span class='text-sm'>(북케이스 포장 10권)</span>", highlight: true }
   ];
 
   const plans = [
+    {
+      name: "미니 에디션",
+      price: "880,000",
+      popular: false,
+      description: "간결하게 담아내는 나의 이야기"
+    },
     {
       name: "스탠다드 에디션",
       price: "1,490,000",
@@ -58,9 +64,13 @@ const Pricing = () => {
           <div className="hidden md:block bg-white rounded-3xl shadow-2xl overflow-hidden mb-16">
             {/* Header */}
             <div className="bg-gradient-to-r from-[#2C3E50] to-emerald-600 p-8">
-              <div className="grid grid-cols-3 gap-8 text-white">
+              <div className="grid grid-cols-4 gap-6 text-white">
                 <div className="text-center flex items-center justify-center">
                   <h3 className="text-xl font-bold mb-2">구분</h3>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2">미니 에디션</h3>
+                  <p className="text-sm opacity-90">간결하게 담아내는 나의 이야기</p>
                 </div>
                 <div className="text-center">
                   <h3 className="text-2xl font-bold mb-2">스탠다드 에디션</h3>
@@ -81,9 +91,12 @@ const Pricing = () => {
 
             {/* Price Row */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b-2 border-emerald-200">
-              <div className="grid grid-cols-3 gap-8 items-center">
+              <div className="grid grid-cols-4 gap-6 items-center">
                 <div className="text-center">
                   <h4 className="text-lg font-bold text-[#2C3E50]">부가세 포함</h4>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-[#2C3E50] mb-1">88만원</div>
                 </div>
                 <div className="text-center">
                   <div className="text-4xl font-bold text-[#2C3E50] mb-1">149만원</div>
@@ -99,12 +112,17 @@ const Pricing = () => {
               const IconComponent = item.icon;
               return (
                 <div key={index} className={`p-6 border-b border-gray-100 ${item.highlight ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : ''}`}>
-                  <div className="grid grid-cols-3 gap-8 items-center">
+                  <div className="grid grid-cols-4 gap-6 items-center">
                     <div className="flex items-center justify-center">
                       <IconComponent className={`h-6 w-6 mr-3 ${item.highlight ? 'text-emerald-600' : 'text-[#C1A875]'}`} />
                        <span className={`font-semibold ${item.highlight ? 'text-emerald-700' : 'text-[#2C3E50]'}`}>
                          {item.label}
                        </span>
+                    </div>
+                    <div className="text-center">
+                      <span className={`text-lg ${item.mini === '미제공' || item.mini === '미포함' ? 'text-gray-400' : 'text-[#2C3E50] font-medium'}`}>
+                        {item.mini}
+                      </span>
                     </div>
                     <div className="text-center">
                       <span className={`text-lg ${item.standard === '미제공' || item.standard === '미포함' ? 'text-gray-400' : 'text-[#2C3E50] font-medium'}`}>
@@ -136,6 +154,35 @@ const Pricing = () => {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-8 mb-16">
+            {/* Mini Edition */}
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-[#8B7355] to-[#A08060] p-6 text-white text-center">
+                <h3 className="text-2xl font-bold mb-2">미니 에디션</h3>
+                <p className="text-sm opacity-90">간결하게 담아내는 나의 이야기</p>
+                <div className="mt-4">
+                  <div className="text-3xl font-bold">88만원</div>
+                  <p className="text-sm opacity-90">부가세 포함</p>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                {comparisonItems.map((item, index) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <div key={index} className="flex items-center gap-3 p-3">
+                       <IconComponent className="h-5 w-5 text-[#C1A875]" />
+                       <span className="font-medium text-[#2C3E50]">
+                         <span className="md:hidden" dangerouslySetInnerHTML={{__html: item.mobileLabel || item.label}}></span>
+                         <span className="hidden md:inline">{item.label}</span>
+                       </span>
+                      <span className={`ml-auto text-lg font-medium ${item.mini === '미제공' || item.mini === '미포함' ? 'text-gray-400' : 'text-[#2C3E50]'}`}>
+                        {item.mini}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Standard Edition */}
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-[#2C3E50] to-slate-600 p-6 text-white text-center">
@@ -156,7 +203,7 @@ const Pricing = () => {
                          <span className="md:hidden" dangerouslySetInnerHTML={{__html: item.mobileLabel || item.label}}></span>
                          <span className="hidden md:inline">{item.label}</span>
                        </span>
-                      <span className="ml-auto text-lg font-medium text-[#2C3E50]">
+                      <span className={`ml-auto text-lg font-medium ${item.standard === '미제공' || item.standard === '미포함' ? 'text-gray-400' : 'text-[#2C3E50]'}`}>
                         {item.standard}
                       </span>
                     </div>
