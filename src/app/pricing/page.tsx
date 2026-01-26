@@ -73,16 +73,16 @@ const Pricing = () => {
                   <p className="text-sm opacity-90">간결하게 담아내는 나의 이야기</p>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-2xl font-bold mb-2">스탠다드 에디션</h3>
-                  <p className="text-sm opacity-90">부담없이 나만의 이야기를 담은 자서전</p>
-                </div>
-                <div className="text-center relative">
                   <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
                     <div className="bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-color-pulse">
                       <Star className="h-3 w-3" />
                       인기
                     </div>
                   </div>
+                  <h3 className="text-2xl font-bold mb-2">스탠다드 에디션</h3>
+                  <p className="text-sm opacity-90">부담없이 나만의 이야기를 담은 자서전</p>
+                </div>
+                <div className="text-center relative">
                   <h3 className="text-2xl font-bold mb-2">프리미엄 에디션</h3>
                   <p className="text-sm opacity-90">다채로운 이야기를 담은 방대한 자서전</p>
                 </div>
