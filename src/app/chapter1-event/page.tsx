@@ -597,24 +597,7 @@ export default function EventLandingPage() {
           </div>
         </section>
 
-        {/* ── SUBMIT ── */}
-        <section className="text-center pb-4">
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="text-white text-lg px-10 py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-            style={{
-              background: "linear-gradient(135deg, #C9A84C, #b8923e)",
-              border: "none",
-            }}
-          >
-            <span className="flex items-center justify-center">
-              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              어린 시절 이야기 제출하기
-            </span>
-          </Button>
-        </section>
+ 
       </div>
 
       <Footer />
