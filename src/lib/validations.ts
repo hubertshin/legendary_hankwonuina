@@ -88,9 +88,7 @@ export const submissionSchema = z.object({
   name: z.string().min(1, "이름을 입력해주세요"),
   birthDate: z.string().min(1, "생년월일을 입력해주세요"),
   phone: z.string().regex(/^01[0-9]{8,9}$/, "올바른 휴대폰 번호를 입력해주세요"),
-  subjectType: z.enum(["본인", "부모님", "형제자매", "친구", "기타"], {
-    errorMap: () => ({ message: "자서전 주인공을 선택해주세요" }),
-  }),
+  subjectType: z.enum(["본인", "부모님", "형제자매", "친구", "기타"]).default("본인"),
   subjectOther: z.string().optional(),
   audioFiles: z.array(z.object({
     s3Key: z.string(),
