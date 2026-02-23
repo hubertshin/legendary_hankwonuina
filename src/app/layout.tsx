@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "./providers";
+import { MetaPixelInit } from "@/components/MetaPixelInit";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -54,6 +55,7 @@ export default function RootLayout({
         className={`${notoSansKR.variable} ${notoSerifKR.variable} font-sans antialiased`}
       >
         <Providers>
+          <MetaPixelInit />
           {children}
           <Toaster />
         </Providers>
