@@ -148,7 +148,7 @@ export default function SubmissionsPage() {
                     className="-ml-3 h-8"
                     onClick={() => handleSort('createdAt')}
                   >
-                    제출일
+                    신청일
                     {sortField === 'createdAt' && (
                       sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
                     )}
@@ -162,7 +162,7 @@ export default function SubmissionsPage() {
                     className="-ml-3 h-8"
                     onClick={() => handleSort('name')}
                   >
-                    이름
+                    신청자
                     {sortField === 'name' && (
                       sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
                     )}
@@ -212,9 +212,10 @@ export default function SubmissionsPage() {
                     <TableRow key={submission.id}>
                       <TableCell>
                         <div>
-                          <div>{new Date(submission.createdAt).toLocaleDateString("ko-KR")}</div>
+                          <div>{new Date(submission.createdAt).toLocaleDateString("ko-KR", { timeZone: 'Asia/Seoul' })}</div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(submission.createdAt).toLocaleTimeString("ko-KR", {
+                              timeZone: 'Asia/Seoul',
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
@@ -225,7 +226,7 @@ export default function SubmissionsPage() {
                         {submission.name}
                       </TableCell>
                       <TableCell>
-                        {new Date(submission.birthDate).toLocaleDateString("ko-KR")}
+                        {new Date(submission.birthDate).toLocaleDateString("ko-KR", { timeZone: 'Asia/Seoul' })}
                       </TableCell>
                       <TableCell>{formatPhoneNumber(submission.phone)}</TableCell>
                     </TableRow>

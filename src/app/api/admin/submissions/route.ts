@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { Pool } from "pg";
 import { z } from "zod";
+
+// Create a direct PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 const querySchema = z.object({
   status: z.enum(["PENDING", "CONTACTED", "PROCESSING", "COMPLETED"]).optional(),
@@ -31,19 +36,39 @@ export async function GET(request: Request) {
 
     const { status, limit, offset } = result.data;
 
-    // Build where clause
-    const where = status ? { status } : {};
+    // Build query with optional status filter
+    let query = `
+      SELECT id, name, "birthDate", phone, "subjectType", "subjectOther", "audioFiles", status, "createdAt", "updatedAt"
+      FROM "Submission"
+    `;
+    const values: (string | number)[] = [];
+    let paramIndex = 1;
 
-    // Fetch submissions
-    const [submissions, total] = await Promise.all([
-      prisma.submission.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      prisma.submission.count({ where }),
+    if (status) {
+      query += ` WHERE status = $${paramIndex}`;
+      values.push(status);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY "createdAt" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    values.push(limit, offset);
+
+    // Count query
+    let countQuery = `SELECT COUNT(*) FROM "Submission"`;
+    const countValues: string[] = [];
+    if (status) {
+      countQuery += ` WHERE status = $1`;
+      countValues.push(status);
+    }
+
+    // Execute queries
+    const [submissionsResult, countResult] = await Promise.all([
+      pool.query(query, values),
+      pool.query(countQuery, countValues),
     ]);
+
+    const submissions = submissionsResult.rows;
+    const total = parseInt(countResult.rows[0].count, 10);
 
     return NextResponse.json({
       submissions,

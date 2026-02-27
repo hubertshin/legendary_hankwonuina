@@ -32,8 +32,16 @@ const REVIEWS = [
 
 export default function EventLandingPage() {
   const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthDay, setBirthDay] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Generate year options (1920 ~ current year)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
@@ -57,7 +65,7 @@ export default function EventLandingPage() {
       toast({ title: "이름을 입력해주세요", variant: "destructive" });
       return;
     }
-    if (!birthDate) {
+    if (!birthYear || !birthMonth || !birthDay) {
       toast({ title: "생년월일을 입력해주세요", variant: "destructive" });
       return;
     }
@@ -69,6 +77,9 @@ export default function EventLandingPage() {
       });
       return;
     }
+
+    // Format birthDate as YYYY-MM-DD
+    const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
 
     setIsSubmitting(true);
     try {
@@ -88,7 +99,9 @@ export default function EventLandingPage() {
       trackLead();
       setShowConfirmation(true);
       setName("");
-      setBirthDate("");
+      setBirthYear("");
+      setBirthMonth("");
+      setBirthDay("");
       setPhone("");
     } catch (error) {
       console.error("Submit error:", error);
@@ -241,7 +254,7 @@ export default function EventLandingPage() {
               backgroundColor: "#fff",
             }}
           >
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-sm mx-auto">
               <div>
                 <Label htmlFor="name">이름 *</Label>
                 <Input
@@ -253,15 +266,45 @@ export default function EventLandingPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="birthDate">생년월일 *</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="mt-1.5"
-                  lang="ko-KR"
-                />
+                <Label>생년월일 *</Label>
+                <div className="flex gap-2 mt-1.5">
+                  <select
+                    value={birthYear}
+                    onChange={(e) => setBirthYear(e.target.value)}
+                    className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">년</option>
+                    {years.map((year) => (
+                      <option key={year} value={String(year)}>
+                        {year}년
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthMonth}
+                    onChange={(e) => setBirthMonth(e.target.value)}
+                    className="w-24 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">월</option>
+                    {months.map((month) => (
+                      <option key={month} value={String(month)}>
+                        {month}월
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthDay}
+                    onChange={(e) => setBirthDay(e.target.value)}
+                    className="w-24 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">일</option>
+                    {days.map((day) => (
+                      <option key={day} value={String(day)}>
+                        {day}일
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <Label htmlFor="phone">전화번호 *</Label>

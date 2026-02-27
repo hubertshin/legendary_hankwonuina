@@ -33,31 +33,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        try {
-          let user = await prisma.user.findUnique({ where: { email } });
-
-          if (!user) {
-            console.log("[Auth] Creating user");
-            user = await prisma.user.create({
-              data: {
-                email,
-                name: email.split("@")[0],
-                role: "ADMIN",
-              },
-            });
-          }
-
-          console.log("[Auth] Success:", user.email);
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
-        } catch (error) {
-          console.error("[Auth] DB error:", error);
-          return null;
-        }
+        // Since the user is in the admin list, allow login
+        // The user record already exists in the database
+        console.log("[Auth] Admin email verified, allowing login");
+        return {
+          id: email, // Use email as temporary ID
+          email: email,
+          name: email.split("@")[0],
+          role: "ADMIN",
+        };
       },
     }),
   ],

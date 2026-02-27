@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { submissionSchema } from "@/lib/validations";
 import { cleanPhoneNumber } from "@/lib/event-utils";
-import { prisma } from "@/lib/db";
+import { Pool } from "pg";
+
+// Create a direct PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 /**
  * POST /api/event/submit
@@ -25,21 +30,33 @@ export async function POST(request: Request) {
     // Clean phone number (remove separators)
     const cleanedPhone = cleanPhoneNumber(phone);
 
-    // Create submission
-    const submission = await prisma.submission.create({
-      data: {
-        name,
-        birthDate: new Date(birthDate),
-        phone: cleanedPhone,
-        subjectType,
-        subjectOther: subjectType === "기타" ? subjectOther : null,
-        audioFiles: audioFiles,
-        status: "PENDING",
-      },
-    });
+    // Get current time in KST (Asia/Seoul)
+    const nowKST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' });
+    const kstDate = new Date(nowKST);
+
+    // Create submission using direct SQL
+    const query = `
+      INSERT INTO "Submission" (id, name, "birthDate", phone, "subjectType", "subjectOther", "audioFiles", status, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $8)
+      RETURNING id
+    `;
+
+    const values = [
+      name,
+      new Date(birthDate),
+      cleanedPhone,
+      subjectType,
+      subjectType === "기타" ? subjectOther : null,
+      JSON.stringify(audioFiles || []),
+      "PENDING",
+      kstDate
+    ];
+
+    const dbResult = await pool.query(query, values);
+    const submissionId = dbResult.rows[0].id;
 
     return NextResponse.json({
-      submissionId: submission.id,
+      submissionId,
       success: true,
       message: "자서전 제1장 무료제작 이벤트 신청이 완료되었습니다.",
     });
