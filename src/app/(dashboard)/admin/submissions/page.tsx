@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Eye, ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/event-utils";
 
-const statusColors = {
-  PENDING: "bg-yellow-100 text-yellow-800",
-  PROCESSING: "bg-purple-100 text-purple-800",
-  CONTACTED: "bg-blue-100 text-blue-800",
-  COMPLETED: "bg-green-100 text-green-800",
-};
-
-const statusLabels = {
-  PENDING: "신청",
-  PROCESSING: "작업중",
-  CONTACTED: "연락완료",
-  COMPLETED: "상담완료",
-};
-
-type SortField = 'createdAt' | 'name' | 'birthDate' | 'phone' | 'subjectType' | 'audioFiles' | 'status';
+type SortField = 'createdAt' | 'name' | 'birthDate' | 'phone';
 type SortDirection = 'asc' | 'desc';
 
 export default function SubmissionsPage() {
@@ -41,7 +25,6 @@ export default function SubmissionsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const itemsPerPage = 15;
 
   useEffect(() => {
@@ -70,13 +53,8 @@ export default function SubmissionsPage() {
     }
   };
 
-  // Filter submissions by search query and status
+  // Filter submissions by search query
   const filteredSubmissions = submissions.filter((submission) => {
-    // Status filter
-    if (statusFilter !== 'ALL' && submission.status !== statusFilter) {
-      return false;
-    }
-
     // Search filter
     if (!searchQuery.trim()) return true;
 
@@ -98,14 +76,6 @@ export default function SubmissionsPage() {
         aValue = new Date(a[sortField]).getTime();
         bValue = new Date(b[sortField]).getTime();
         break;
-      case 'audioFiles':
-        aValue = Array.isArray(a.audioFiles) ? a.audioFiles.length : 0;
-        bValue = Array.isArray(b.audioFiles) ? b.audioFiles.length : 0;
-        break;
-      case 'subjectType':
-        aValue = a.subjectType === '기타' ? a.subjectOther : a.subjectType;
-        bValue = b.subjectType === '기타' ? b.subjectOther : b.subjectType;
-        break;
       default:
         aValue = a[sortField];
         bValue = b[sortField];
@@ -122,19 +92,10 @@ export default function SubmissionsPage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedSubmissions = sortedSubmissions.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search query or status filter changes
+  // Reset to page 1 when search query changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
-
-  // Calculate stats
-  const stats = {
-    total: submissions.length,
-    pending: submissions.filter((s) => s.status === "PENDING").length,
-    contacted: submissions.filter((s) => s.status === "CONTACTED").length,
-    processing: submissions.filter((s) => s.status === "PROCESSING").length,
-    completed: submissions.filter((s) => s.status === "COMPLETED").length,
-  };
+  }, [searchQuery]);
 
   if (isLoading) {
     return (
@@ -147,101 +108,10 @@ export default function SubmissionsPage() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">제1장 무료 이벤트 신청자 관리</h1>
+        <h1 className="text-3xl font-bold mb-2">무료 자서전 신청자 관리</h1>
         <p className="text-muted-foreground">
-          자서전 제1장 무료 제작 이벤트 신청자 목록
+          총 {submissions.length}명의 신청자
         </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5 mb-8">
-        <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            statusFilter === 'ALL' ? 'ring-2 ring-primary shadow-md' : ''
-          }`}
-          onClick={() => setStatusFilter('ALL')}
-        >
-          <CardHeader className="pb-1 pt-4 text-center">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              전체
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-2 text-center">
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            statusFilter === 'PENDING' ? 'ring-2 ring-yellow-500 shadow-md' : ''
-          }`}
-          onClick={() => setStatusFilter('PENDING')}
-        >
-          <CardHeader className="pb-1 pt-4 text-center">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              신청
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-2 text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.pending}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            statusFilter === 'PROCESSING' ? 'ring-2 ring-purple-500 shadow-md' : ''
-          }`}
-          onClick={() => setStatusFilter('PROCESSING')}
-        >
-          <CardHeader className="pb-1 pt-4 text-center">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              작업중
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-2 text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {stats.processing}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            statusFilter === 'CONTACTED' ? 'ring-2 ring-blue-500 shadow-md' : ''
-          }`}
-          onClick={() => setStatusFilter('CONTACTED')}
-        >
-          <CardHeader className="pb-1 pt-4 text-center">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              연락완료
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-2 text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.contacted}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            statusFilter === 'COMPLETED' ? 'ring-2 ring-green-500 shadow-md' : ''
-          }`}
-          onClick={() => setStatusFilter('COMPLETED')}
-        >
-          <CardHeader className="pb-1 pt-4 text-center">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              상담완료
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-2 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {stats.completed}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search Bar */}
@@ -327,64 +197,17 @@ export default function SubmissionsPage() {
                     {sortField !== 'phone' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
                   </Button>
                 </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8"
-                    onClick={() => handleSort('subjectType')}
-                  >
-                    자서전 주인공
-                    {sortField === 'subjectType' && (
-                      sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                    )}
-                    {sortField !== 'subjectType' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8"
-                    onClick={() => handleSort('audioFiles')}
-                  >
-                    음성 파일
-                    {sortField === 'audioFiles' && (
-                      sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                    )}
-                    {sortField !== 'audioFiles' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8"
-                    onClick={() => handleSort('status')}
-                  >
-                    상태
-                    {sortField === 'status' && (
-                      sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                    )}
-                    {sortField !== 'status' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                  </Button>
-                </TableHead>
-                <TableHead>액션</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedSubmissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     신청 내역이 없습니다.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedSubmissions.map((submission) => {
-                  const audioFiles = Array.isArray(submission.audioFiles)
-                    ? submission.audioFiles
-                    : [];
-
                   return (
                     <TableRow key={submission.id}>
                       <TableCell>
@@ -405,24 +228,6 @@ export default function SubmissionsPage() {
                         {new Date(submission.birthDate).toLocaleDateString("ko-KR")}
                       </TableCell>
                       <TableCell>{formatPhoneNumber(submission.phone)}</TableCell>
-                      <TableCell>
-                        {submission.subjectType === "기타"
-                          ? `기타 (${submission.subjectOther})`
-                          : submission.subjectType}
-                      </TableCell>
-                      <TableCell>{audioFiles.length}개</TableCell>
-                      <TableCell>
-                        <Badge className={statusColors[submission.status as keyof typeof statusColors]}>
-                          {statusLabels[submission.status as keyof typeof statusLabels]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/admin/submissions/${submission.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </TableCell>
                     </TableRow>
                   );
                 })
