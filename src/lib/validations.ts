@@ -97,7 +97,7 @@ export const submissionSchema = z.object({
     mimeType: z.string(),
     size: z.number(),
     clipIndex: z.number(),
-  })).min(1, "최소 1개 이상의 음성 파일을 녹음해주세요"),
+  })).optional().default([]),
 });
 
 export const updateSubmissionSchema = z.object({
