@@ -6,25 +6,11 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AudioRecorder } from "@/components/recording/audio-recorder";
-import { FileUploader } from "@/components/recording/file-uploader";
-import { QuestionPanel } from "@/components/recording/question-panel";
 import { ConfirmationModal } from "@/components/event/confirmation-modal";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, Upload, Trash2, CheckCircle, Loader2, BookOpen, Quote } from "lucide-react";
+import { Loader2, BookOpen, Quote } from "lucide-react";
 import { generateSessionId, validateKoreanPhone, cleanPhoneNumber } from "@/lib/event-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { trackLead } from "@/lib/metaPixel";
-
-interface AudioFile {
-  clipIndex: number;
-  s3Key: string;
-  filename: string;
-  duration: number;
-  mimeType: string;
-  size: number;
-  audioUrl?: string;
-}
 
 const REVIEWS = [
   {
@@ -45,124 +31,14 @@ const REVIEWS = [
 ];
 
 export default function EventLandingPage() {
-  const [sessionId, setSessionId] = useState("");
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [phone, setPhone] = useState("");
-  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [recorderKey, setRecorderKey] = useState(0);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const id = generateSessionId();
-    setSessionId(id);
-  }, []);
 
-  const handleRecordingComplete = async (blob: Blob, duration: number) => {
-    if (blob.size < 100) return;
-
-    if (audioFiles.length >= 3) {
-      toast({ title: "최대 3개까지 녹음 가능합니다", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const clipIndex = Date.now();
-
-      let extension = "m4a";
-      if (blob.type.includes("webm")) extension = "webm";
-      else if (blob.type.includes("mp4") || blob.type.includes("m4a")) extension = "m4a";
-      else if (blob.type.includes("mpeg") || blob.type.includes("mp3")) extension = "mp3";
-
-      const filename = `recording-${clipIndex}.${extension}`;
-
-      const presignResponse = await fetch("/api/event/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, contentType: blob.type, size: blob.size, clipIndex, sessionId }),
-      });
-      if (!presignResponse.ok) throw new Error("Failed to get upload URL");
-
-      const { uploadUrl, s3Key } = await presignResponse.json();
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": blob.type },
-        body: blob,
-      });
-      if (!uploadResponse.ok) throw new Error("Failed to upload file");
-
-      const confirmResponse = await fetch("/api/event/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ s3Key, duration }),
-      });
-      if (!confirmResponse.ok) throw new Error("Failed to confirm upload");
-
-      const { s3Url } = await confirmResponse.json();
-
-      setAudioFiles((prev) => [
-        ...prev,
-        { clipIndex, s3Key, filename, duration, mimeType: blob.type, size: blob.size, audioUrl: s3Url },
-      ]);
-      toast({ title: "녹음이 저장되었습니다" });
-    } catch (error) {
-      console.error("Recording upload error:", error);
-      toast({ title: "녹음 저장 실패", description: "다시 시도해주세요.", variant: "destructive" });
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    if (audioFiles.length >= 3) {
-      toast({ title: "최대 3개까지 업로드 가능합니다", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const clipIndex = Date.now();
-
-      const presignResponse = await fetch("/api/event/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size, clipIndex, sessionId }),
-      });
-      if (!presignResponse.ok) throw new Error("Failed to get upload URL");
-
-      const { uploadUrl, s3Key } = await presignResponse.json();
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadResponse.ok) throw new Error("Failed to upload file");
-
-      const confirmResponse = await fetch("/api/event/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ s3Key, duration: 0 }),
-      });
-      if (!confirmResponse.ok) throw new Error("Failed to confirm upload");
-
-      const { s3Url } = await confirmResponse.json();
-
-      setAudioFiles((prev) => [
-        ...prev,
-        { clipIndex, s3Key, filename: file.name, duration: 0, mimeType: file.type, size: file.size, audioUrl: s3Url },
-      ]);
-      toast({ title: "파일이 업로드되었습니다" });
-    } catch (error) {
-      console.error("File upload error:", error);
-      toast({ title: "파일 업로드 실패", description: "다시 시도해주세요.", variant: "destructive" });
-    }
-  };
-
-  const handleDeleteAudio = (clipIndex: number) => {
-    setAudioFiles((prev) => prev.filter((f) => f.clipIndex !== clipIndex));
-    toast({ title: "삭제되었습니다" });
-  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const numbers = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
@@ -193,10 +69,6 @@ export default function EventLandingPage() {
       });
       return;
     }
-    if (audioFiles.length === 0) {
-      toast({ title: "최소 1개 이상의 음성 파일을 녹음해주세요", variant: "destructive" });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -208,7 +80,7 @@ export default function EventLandingPage() {
           birthDate,
           phone: cleanPhoneNumber(phone),
           subjectType: "본인",
-          audioFiles,
+          audioFiles: [],
         }),
       });
       if (!response.ok) throw new Error("Failed to submit");
@@ -218,8 +90,6 @@ export default function EventLandingPage() {
       setName("");
       setBirthDate("");
       setPhone("");
-      setAudioFiles([]);
-      setRecorderKey((prev) => prev + 1);
     } catch (error) {
       console.error("Submit error:", error);
       toast({ title: "제출 실패", description: "다시 시도해주세요.", variant: "destructive" });
@@ -260,8 +130,7 @@ export default function EventLandingPage() {
           <div className="space-y-4 max-w-2xl mx-auto text-left">
             {[
               "신청자 정보 입력하기",
-              "아래의 인터뷰 질문지를 살펴보면서 어린 시절 이야기를 음성 녹음하기",
-              "녹음 파일을 성공적으로 제출하기",
+              "제출하기",
             ].map((step, i) => (
               <div
                 key={i}
@@ -363,8 +232,7 @@ export default function EventLandingPage() {
         {/* ── FORM: 1. 신청자 정보 ── */}
         <section className="mb-12">
           <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            <span style={{ color: "#C9A84C" }}>1.</span>{" "}
-            <span style={{ color: "#1C1C1E" }}>신청자 정보 입력</span>
+            <span style={{ color: "#1C1C1E" }}>무료 자서전 신청 정보 입력</span>
           </h2>
           <div
             className="rounded-3xl p-6 shadow-lg"
@@ -410,159 +278,7 @@ export default function EventLandingPage() {
           </div>
         </section>
 
-        {/* ── FORM: 2. 녹음 가이드 ── */}
-        <section className="mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            <span style={{ color: "#C9A84C" }}>2.</span>{" "}
-            <span style={{ color: "#1C1C1E" }}>녹음 가이드</span>
-          </h2>
-          <div
-            className="rounded-3xl p-6 shadow-lg"
-            style={{
-              background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
-              backgroundColor: "#fff",
-            }}
-          >
-            <p className="font-semibold mb-4" style={{ color: "#1C1C1E" }}>
-              본인의 어린 시절 이야기를 가족에게 말해주듯 편안하게 녹음해주세요
-            </p>
 
-            <div className="mb-4">
-              <Label className="mb-2 block font-semibold" style={{ color: "#1C1C1E" }}>
-                예시 음성 듣기
-              </Label>
-              <div className="p-3 bg-white rounded-lg border">
-                <audio controls controlsList="nodownload noplaybackrate" className="w-full">
-                  <source src="/audio/example.m4a" type="audio/mp4" />
-                  브라우저가 오디오 재생을 지원하지 않습니다.
-                </audio>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm" style={{ color: "#555" }}>
-              <p>• 한 파일당 3~10분 정도로 녹음해주세요.</p>
-              <p>• 조용한 공간에서 녹음해주세요.</p>
-              <p>• 말이 정리되지 않아도 괜찮습니다. 편안하게 대화하듯 녹음해주세요.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── FORM: 3. 음성 녹음 ── */}
-        <section className="mb-12 overflow-hidden">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            <span style={{ color: "#C9A84C" }}>3.</span>{" "}
-            <span style={{ color: "#1C1C1E" }}>음성 녹음하기 (최대 3개)</span>
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6 w-full overflow-hidden">
-            <div className="space-y-6 w-full min-w-0 overflow-hidden">
-              <div
-                className="w-full overflow-hidden rounded-3xl p-6 shadow-lg"
-                style={{
-                  background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
-                  backgroundColor: "#fff",
-                }}
-              >
-                <Tabs defaultValue="record" className="w-full overflow-hidden">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="record">
-                      <Mic className="h-4 w-4 mr-2" />
-                      녹음하기
-                    </TabsTrigger>
-                    <TabsTrigger value="upload">
-                      <Upload className="h-4 w-4 mr-2" />
-                      파일 업로드
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="record" className="mt-4 overflow-hidden">
-                    <p className="text-sm mb-4" style={{ color: "#555" }}>
-                      이 버튼을 눌러 음성 녹음을 시작하세요.
-                    </p>
-                    <AudioRecorder
-                      key={recorderKey}
-                      onRecordingComplete={handleRecordingComplete}
-                      maxDuration={600}
-                      disabled={audioFiles.length >= 3}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="upload" className="mt-4 overflow-hidden">
-                    <FileUploader
-                      onFileSelect={handleFileUpload}
-                      disabled={audioFiles.length >= 3}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-
-              {audioFiles.length > 0 && (
-                <div
-                  className="rounded-3xl p-6 shadow-lg"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
-                    backgroundColor: "#fff",
-                  }}
-                >
-                  <h3 className="font-semibold mb-4" style={{ color: "#1C1C1E" }}>
-                    녹음된 파일 ({audioFiles.length}/3)
-                  </h3>
-                  <div className="space-y-3">
-                    {audioFiles.map((file) => (
-                      <div key={file.clipIndex} className="p-3 bg-white/50 rounded-lg space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: "#C9A84C" }} />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate" style={{ color: "#1C1C1E" }}>
-                                {file.filename}
-                              </p>
-                              {file.duration > 0 && (
-                                <p className="text-xs" style={{ color: "#999" }}>
-                                  {Math.floor(file.duration / 60)}:
-                                  {String(Math.floor(file.duration % 60)).padStart(2, "0")}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteAudio(file.clipIndex)}
-                            className="flex-shrink-0"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                        {file.audioUrl && (
-                          <audio src={file.audioUrl} controls className="w-full h-10" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <QuestionPanel sessionId={sessionId} />
-          </div>
-        </section>
-
-        {/* ── CTA (mid-page) ── */}
-        <section className="text-center mb-12">
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="text-white text-lg px-10 py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-            style={{ background: "linear-gradient(135deg, #C9A84C, #b8923e)", border: "none" }}
-          >
-            <span className="flex items-center justify-center">
-              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              어린 시절 이야기 제출하기
-            </span>
-          </Button>
-        </section>
 
         {/* ── REVIEWS SECTION ── */}
         <section className="mb-12">
@@ -613,7 +329,7 @@ export default function EventLandingPage() {
           >
             <span className="flex items-center justify-center">
               {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              어린 시절 이야기 제출하기
+              무료 자서전 신청하기
             </span>
           </Button>
         </section>

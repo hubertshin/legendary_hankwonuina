@@ -40,16 +40,7 @@ export function ConfirmationModal({
             신청이 완료되었습니다
           </DialogTitle>
           <DialogDescription className="text-center text-base leading-relaxed pt-4">
-            <strong className="text-warm-900">
-              자서전 제1장 무료제작 이벤트 신청이 완료되었습니다.
-            </strong>
-            <br />
-            <br />
-            '한권의나'에서 고객님의 음성 이야기를 바탕으로
-            <br />
-            자서전 제1장(어린 시절)을 제작한 후
-            <br />
-            <strong className="text-warm-900">2일 이내에 연락드리겠습니다.</strong>
+            신청이 완료되었습니다. 담당자가 곧 연락드릴게요.
           </DialogDescription>
         </DialogHeader>
 
