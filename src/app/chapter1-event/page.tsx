@@ -150,7 +150,7 @@ export default function EventLandingPage() {
         <section className="mb-12">
           <div className="flex items-center gap-3 mb-6">
             <NotebookPen className="w-7 h-7 flex-shrink-0" style={{ color: "#C9A84C" }} />
-            <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#1C1C1E" }}>
+            <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#1C1C1E", fontFamily: "var(--font-noto-serif)" }}>
               무료 자서전 신청 정보 입력
             </h2>
           </div>
