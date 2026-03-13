@@ -50,7 +50,7 @@ export function SubmitReviewModal({
           style={{ backgroundColor: "#F8F5EF", border: "1px solid #E8DFC8" }}
         >
           <div className="flex items-center gap-4">
-            <span className="text-base font-semibold w-24 flex-shrink-0" style={{ color: "#888" }}>이름</span>
+            <span className="text-base font-semibold w-24 flex-shrink-0" style={{ color: "#888" }}>성함</span>
             <span className="text-xl font-bold" style={{ color: "#1C1C1E" }}>{name}</span>
           </div>
           <div className="flex items-center gap-4">

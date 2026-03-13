@@ -184,14 +184,14 @@ export default function EventLandingPage() {
             }}
           >
             <div className="space-y-8 max-w-sm mx-auto">
-              {/* 이름 */}
+              {/* 성함 */}
               <div>
                 <label
                   htmlFor="name"
                   className="block text-xl font-bold mb-2"
                   style={{ color: "#1C1C1E" }}
                 >
-                  이름 <span style={{ color: "#C9A84C" }}>*</span>
+                  성함 <span style={{ color: "#C9A84C" }}>*</span>
                 </label>
                 <p className="text-base mb-2" style={{ color: "#888" }}>
                   예) 홍길동
