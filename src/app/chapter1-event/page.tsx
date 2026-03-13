@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmationModal } from "@/components/event/confirmation-modal";
-import { Loader2, BookOpen, Quote } from "lucide-react";
+import { SubmitReviewModal } from "@/components/event/submit-review-modal";
+import { Loader2, BookOpen, Quote, NotebookPen } from "lucide-react";
 import { generateSessionId, validateKoreanPhone, cleanPhoneNumber } from "@/lib/event-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { trackLead } from "@/lib/metaPixel";
@@ -43,6 +44,7 @@ export default function EventLandingPage() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
 
@@ -60,7 +62,7 @@ export default function EventLandingPage() {
     setPhone(formatted);
   };
 
-  const handleSubmit = async () => {
+  const handleOpenReview = () => {
     if (!name.trim()) {
       toast({ title: "이름을 입력해주세요", variant: "destructive" });
       return;
@@ -77,7 +79,10 @@ export default function EventLandingPage() {
       });
       return;
     }
+    setShowReview(true);
+  };
 
+  const handleSubmit = async () => {
     // Format birthDate as YYYY-MM-DD
     const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
 
@@ -97,6 +102,7 @@ export default function EventLandingPage() {
       if (!response.ok) throw new Error("Failed to submit");
 
       trackLead();
+      setShowReview(false);
       setShowConfirmation(true);
       setName("");
       setBirthYear("");
@@ -159,6 +165,154 @@ export default function EventLandingPage() {
                 <p style={{ color: "#1C1C1E" }} className="leading-relaxed pt-0.5">{step}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── FORM: 1. 신청자 정보 ── */}
+        <section className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <NotebookPen className="w-7 h-7 flex-shrink-0" style={{ color: "#C9A84C" }} />
+            <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#1C1C1E" }}>
+              무료 자서전 신청 정보 입력
+            </h2>
+          </div>
+          <div
+            className="rounded-3xl p-8 shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
+              backgroundColor: "#fff",
+            }}
+          >
+            <div className="space-y-8 max-w-sm mx-auto">
+              {/* 이름 */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-xl font-bold mb-2"
+                  style={{ color: "#1C1C1E" }}
+                >
+                  이름 <span style={{ color: "#C9A84C" }}>*</span>
+                </label>
+                <p className="text-base mb-2" style={{ color: "#888" }}>
+                  예) 홍길동
+                </p>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="홍길동"
+                  className="h-16 text-xl px-4 rounded-xl border-2"
+                  style={{ fontSize: "1.25rem" }}
+                />
+              </div>
+
+              {/* 생년월일 */}
+              <div>
+                <p className="text-xl font-bold mb-2" style={{ color: "#1C1C1E" }}>
+                  태어나신 년도 / 월 / 일 <span style={{ color: "#C9A84C" }}>*</span>
+                </p>
+                <p className="text-base mb-3" style={{ color: "#888" }}>
+                  예) 1950 년 &nbsp; 3 월 &nbsp; 15 일
+                </p>
+                <div className="flex items-center">
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={birthYear}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 4);
+                        setBirthYear(v);
+                      }}
+                      placeholder="1950"
+                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
+                      style={{ fontSize: "1.25rem", width: "6.5rem" }}
+                    />
+                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>년</span>
+                  </div>
+                  <div className="w-5 flex-shrink-0" />
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={birthMonth}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+                        if (v === "" || (Number(v) >= 1 && Number(v) <= 12)) setBirthMonth(v);
+                      }}
+                      placeholder="3"
+                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
+                      style={{ fontSize: "1.25rem", width: "4rem" }}
+                    />
+                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>월</span>
+                  </div>
+                  <div className="w-5 flex-shrink-0" />
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={birthDay}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+                        if (v === "" || (Number(v) >= 1 && Number(v) <= 31)) setBirthDay(v);
+                      }}
+                      placeholder="15"
+                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
+                      style={{ fontSize: "1.25rem", width: "4rem" }}
+                    />
+                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>일</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 전화번호 */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-xl font-bold mb-2"
+                  style={{ color: "#1C1C1E" }}
+                >
+                  전화번호 <span style={{ color: "#C9A84C" }}>*</span>
+                </label>
+                <p className="text-base mb-2" style={{ color: "#888" }}>
+                  숫자만 입력하시면 자동으로 정리됩니다 &nbsp; 예) 010-1234-5678
+                </p>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder="010-0000-0000"
+                  className="h-16 text-xl px-4 rounded-xl border-2"
+                  style={{ fontSize: "1.25rem" }}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <Button
+                  size="lg"
+                  onClick={handleOpenReview}
+                  disabled={isSubmitting}
+                  className="w-full text-white font-bold rounded-xl shadow-xl transition-all duration-300"
+                  style={{
+                    background: "linear-gradient(135deg, #C9A84C, #b8923e)",
+                    border: "none",
+                    fontSize: "1.375rem",
+                    padding: "1.25rem",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  <span className="flex items-center justify-center">
+                    {isSubmitting && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
+                    무료 자서전 신청하기
+                  </span>
+                </Button>
+                <p className="text-center text-base mt-3" style={{ color: "#888" }}>
+                  입력하신 정보는 자서전 제작에만 사용됩니다
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -242,106 +396,6 @@ export default function EventLandingPage() {
           </div>
         </section>
 
-        {/* ── FORM: 1. 신청자 정보 ── */}
-        <section className="mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            <span style={{ color: "#1C1C1E" }}>무료 자서전 신청 정보 입력</span>
-          </h2>
-          <div
-            className="rounded-3xl p-6 shadow-lg"
-            style={{
-              background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
-              backgroundColor: "#fff",
-            }}
-          >
-            <div className="space-y-6 max-w-sm mx-auto">
-              <div>
-                <Label htmlFor="name">이름 *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="홍길동"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>생년월일 *</Label>
-                <div className="flex gap-2 mt-1.5">
-                  <select
-                    value={birthYear}
-                    onChange={(e) => setBirthYear(e.target.value)}
-                    className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="">년</option>
-                    {years.map((year) => (
-                      <option key={year} value={String(year)}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={birthMonth}
-                    onChange={(e) => setBirthMonth(e.target.value)}
-                    className="w-24 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="">월</option>
-                    {months.map((month) => (
-                      <option key={month} value={String(month)}>
-                        {month}월
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={birthDay}
-                    onChange={(e) => setBirthDay(e.target.value)}
-                    className="w-24 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="">일</option>
-                    {days.map((day) => (
-                      <option key={day} value={String(day)}>
-                        {day}일
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="phone">전화번호 *</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  placeholder="010-1234-5678"
-                  className="mt-1.5"
-                  inputMode="numeric"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-4">
-                <Button
-                  size="lg"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="w-full text-white text-lg py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-                  style={{
-                    background: "linear-gradient(135deg, #C9A84C, #b8923e)",
-                    border: "none",
-                  }}
-                >
-                  <span className="flex items-center justify-center">
-                    {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                    무료 자서전 신청하기
-                  </span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-
         {/* ── REVIEWS SECTION ── */}
         <section className="mb-12">
           <h2
@@ -381,6 +435,17 @@ export default function EventLandingPage() {
 
       <Footer />
 
+      <SubmitReviewModal
+        open={showReview}
+        onOpenChange={setShowReview}
+        name={name}
+        birthYear={birthYear}
+        birthMonth={birthMonth}
+        birthDay={birthDay}
+        phone={phone}
+        isSubmitting={isSubmitting}
+        onConfirm={handleSubmit}
+      />
       <ConfirmationModal open={showConfirmation} onOpenChange={setShowConfirmation} />
     </div>
   );
