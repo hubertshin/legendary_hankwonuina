@@ -281,7 +281,7 @@ export default function EventLandingPage() {
                 >
                   <span className="flex items-center justify-center">
                     {isSubmitting && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
-                    무료 자서전 신청하기
+                    신청
                   </span>
                 </Button>
                 <p className="text-center text-base mt-3" style={{ color: "#888" }}>
