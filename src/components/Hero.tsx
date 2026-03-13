@@ -61,12 +61,12 @@ export const Hero = () => {
           <div className="flex justify-center items-center mb-10 w-full">
             <Button
               size="lg"
-              onClick={() => handleLinkClick('/consultation')}
-              className="relative bg-gradient-to-r from-brand-gold via-accent to-brand-gold hover:from-brand-gold-hover hover:via-brand-gold-hover hover:to-brand-gold-hover text-white text-lg px-10 py-5 font-semibold rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 ease-out border-2 border-brand-gold/30 hover:border-brand-gold-hover/50 group overflow-hidden w-full max-w-md lg:max-w-none lg:w-auto"
+              onClick={() => handleLinkClick('/chapter1-event')}
+              className="relative bg-gradient-to-r from-brand-gold via-accent to-brand-gold hover:from-brand-gold-hover hover:via-brand-gold-hover hover:to-brand-gold-hover text-white text-2xl px-16 py-8 font-bold rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 ease-out border-2 border-brand-gold/30 hover:border-brand-gold-hover/50 group overflow-hidden w-full max-w-lg lg:max-w-none lg:w-auto"
             >
               <span className="relative z-10 flex items-center justify-center">
-                자서전 만들기 시작
-                <ArrowRight className="ml-3 h-6 w-6 transform group-hover:translate-x-1 transition-transform duration-300" />
+                무료 이벤트 신청하기
+                <ArrowRight className="ml-3 h-7 w-7 transform group-hover:translate-x-1 transition-transform duration-300" />
               </span>
             </Button>
           </div>
