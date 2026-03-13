@@ -294,14 +294,13 @@ export default function EventLandingPage() {
                   size="lg"
                   onClick={handleOpenReview}
                   disabled={isSubmitting}
-                  className="w-full text-white font-bold rounded-xl transition-all duration-300 hover:scale-105"
+                  className="w-full text-white font-bold rounded-xl shadow-xl transition-all duration-300"
                   style={{
-                    background: "linear-gradient(135deg, #9B1B1B, #C0392B)",
+                    background: "linear-gradient(135deg, #C9A84C, #b8923e)",
                     border: "none",
                     fontSize: "1.375rem",
                     padding: "1.25rem",
                     lineHeight: "1.4",
-                    boxShadow: "0 8px 24px rgba(155, 27, 27, 0.45)",
                   }}
                 >
                   <span className="flex items-center justify-center">
