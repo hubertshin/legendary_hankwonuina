@@ -62,7 +62,11 @@ export const Hero = () => {
             <Button
               size="lg"
               onClick={() => handleLinkClick('/chapter1-event')}
-              className="relative bg-gradient-to-r from-brand-gold via-accent to-brand-gold hover:from-brand-gold-hover hover:via-brand-gold-hover hover:to-brand-gold-hover text-white text-2xl px-16 py-8 font-bold rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 ease-out border-2 border-brand-gold/30 hover:border-brand-gold-hover/50 group overflow-hidden w-full max-w-lg lg:max-w-none lg:w-auto"
+              className="relative text-white text-2xl px-16 py-8 font-bold rounded-2xl transform hover:scale-105 transition-all duration-300 ease-out group overflow-hidden w-full max-w-lg lg:max-w-none lg:w-auto"
+              style={{
+                background: "linear-gradient(135deg, #9B1B1B, #C0392B)",
+                boxShadow: "0 8px 32px rgba(155, 27, 27, 0.5)",
+              }}
             >
               <span className="relative z-10 flex items-center justify-center">
                 무료 이벤트 신청하기
