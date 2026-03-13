@@ -126,7 +126,7 @@ export default function EventLandingPage() {
         {/* ── HERO SECTION ── */}
         <section className="text-center mb-16">
           <div
-            className="inline-block text-sm font-semibold px-5 py-2 rounded-full mb-6 tracking-wide"
+            className="inline-block text-xl font-bold px-8 py-3 rounded-full mb-6 tracking-wide"
             style={{ backgroundColor: "#C9A84C", color: "#fff" }}
           >
             선착순 무료 · 부담 없이 경험해보세요
@@ -144,28 +144,6 @@ export default function EventLandingPage() {
             20분만 이야기해 주시면,<br />
             자서전 제1장을 <strong style={{ color: "#C9A84C" }}>무료</strong>로 완성해드립니다
           </p>
-
-          {/* Steps */}
-          <div className="space-y-4 max-w-2xl mx-auto text-left">
-            {[
-              "신청자 정보 입력하기",
-              "제출하기",
-            ].map((step, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-4 rounded-2xl p-5 shadow-sm"
-                style={{ backgroundColor: "#fff" }}
-              >
-                <div
-                  className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                  style={{ backgroundColor: "#C9A84C" }}
-                >
-                  {i + 1}
-                </div>
-                <p style={{ color: "#1C1C1E" }} className="leading-relaxed pt-0.5">{step}</p>
-              </div>
-            ))}
-          </div>
         </section>
 
         {/* ── FORM: 1. 신청자 정보 ── */}
