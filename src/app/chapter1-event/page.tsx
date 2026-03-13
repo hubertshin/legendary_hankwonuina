@@ -252,9 +252,7 @@ export default function EventLandingPage() {
                 >
                   전화번호 <span style={{ color: "#C9A84C" }}>*</span>
                 </label>
-                <p className="text-base mb-2" style={{ color: "#888" }}>
-                  숫자만 입력하시면 자동으로 정리됩니다 &nbsp; 예) 010-1234-5678
-                </p>
+
                 <Input
                   id="phone"
                   value={phone}
