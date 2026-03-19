@@ -67,7 +67,7 @@ export const Footer = () => {
             <p>상호: 휴버트랩스 | 사업자번호: 210-81-80823</p>
             <p>소재지: 경기도 과천시 별양로 110 624</p>
           </div>
-          <p>&copy; 2025 한권의나 All rights reserved.</p>
+          <p>&copy; 2026 한권의나 All rights reserved.</p>
         </div>
       </div>
     </footer>
