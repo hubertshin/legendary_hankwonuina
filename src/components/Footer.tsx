@@ -64,8 +64,8 @@ export const Footer = () => {
 
         <div className="border-t border-white/20 pt-8 text-center text-white/70">
           <div className="mb-4 text-sm">
-            <p>상호: 에임와이즈 | 사업자번호: 407-07-66575</p>
-            <p>소재지: 경기도 양주시 부흥로 1936, 405호</p>
+            <p>상호: 휴버트랩스 | 사업자번호: 210-81-80823</p>
+            <p>소재지: 경기도 과천시 별양로 110 624</p>
           </div>
           <p>&copy; 2025 한권의나 All rights reserved.</p>
         </div>
