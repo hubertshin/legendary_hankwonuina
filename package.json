@@ -16,7 +16,8 @@
     "worker:dev": "tsx watch src/workers/index.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && node scripts/apply-migrations.mjs && next build",
+    "db:migrate:apply": "node scripts/apply-migrations.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",
