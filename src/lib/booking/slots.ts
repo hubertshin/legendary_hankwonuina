@@ -8,7 +8,8 @@
  * 네트워크·DB를 모르는 순수 함수라 단위 테스트가 쉽다.
  */
 
-import { BOOKING, HOLIDAYS, TIME_GROUPS } from "./config";
+import { BOOKING, TIME_GROUPS } from "./config";
+import { isHoliday } from "./holidays";
 import {
   addDaysToDateKey,
   dateKeyToInstant,
@@ -60,7 +61,7 @@ export interface SlotContext {
 export function candidateSlotStarts(dateKey: string): Date[] {
   const dayStart = dateKeyToInstant(dateKey);
   if (!dayStart) return [];
-  if (HOLIDAYS.has(dateKey)) return [];
+  if (isHoliday(dateKey)) return [];
 
   const { weekday } = toKstParts(dayStart);
   const window = BOOKING.windowsByWeekday[weekday];
