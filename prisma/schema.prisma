@@ -234,10 +234,20 @@ model Submission {
 
   // Personal Info
   name            String
-  birthDate       DateTime
+  // 상담 예약 단계에서는 생년월일을 받지 않는다. 통화에서 물으면 되는 정보를
+  // 폼에서 요구하면 전환만 깎인다. 기존 데이터 호환을 위해 선택으로 바꿨다.
+  birthDate       DateTime?
   phone           String
   subjectType     String           // 본인, 부모님, 형제자매, 친구, 기타
   subjectOther    String?          // subjectType이 '기타'일 때
+
+  // ── 상담 예약 (전화 통화 희망 시각) ──
+  /// 희망 통화 시각. anyTimeOk가 true면 null이며 운영자가 배정한다.
+  preferredSlotAt DateTime?
+  /// "아무 때나 괜찮아요" — 시간 선택 부담으로 이탈하는 층을 건지기 위한 옵션
+  anyTimeOk       Boolean          @default(false)
+  /// 개인정보 수집·이용 동의 시각 (법적 증빙)
+  consentPrivacyAt DateTime?
 
   // Audio Files (JSON array)
   audioFiles      Json             // [{s3Key, filename, duration, mimeType, size, clipIndex}]
@@ -250,6 +260,7 @@ model Submission {
 
   @@index([status])
   @@index([createdAt])
+  @@index([preferredSlotAt])
 }
 
 enum SubmissionStatus {

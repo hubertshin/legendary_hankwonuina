@@ -58,7 +58,7 @@ export const Hero = () => {
           {/* 필름 스트립 애니메이션 */}
           <FilmStrip />
 
-          <div className="flex justify-center items-center mb-10 w-full">
+          <div className="flex flex-col justify-center items-center mb-10 w-full">
             <Button
               size="lg"
               onClick={() => handleLinkClick('/chapter1-event')}
@@ -73,6 +73,13 @@ export const Hero = () => {
                 <ArrowRight className="ml-3 h-7 w-7 transform group-hover:translate-x-1 transition-transform duration-300" />
               </span>
             </Button>
+            {/* 무엇이 일어나는지 버튼 아래에서 미리 알려준다 — 클릭 전 불확실성 제거 */}
+            <p
+              className="mt-3 text-base md:text-lg text-center px-2"
+              style={{ color: "#555" }}
+            >
+              원하시는 시간을 고르세요. 그 시간에 전화드립니다
+            </p>
           </div>
         </div>
       </div>

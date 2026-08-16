@@ -197,7 +197,39 @@ export default function SubmissionDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">생년월일</p>
               <p className="font-medium">
-                {new Date(submission.birthDate).toLocaleDateString("ko-KR")}
+                {submission.birthDate
+                  ? new Date(submission.birthDate).toLocaleDateString("ko-KR")
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">희망 통화 시각</p>
+              <p className="font-medium">
+                {submission.preferredSlotAt ? (
+                  new Intl.DateTimeFormat("ko-KR", {
+                    timeZone: "Asia/Seoul",
+                    month: "long",
+                    day: "numeric",
+                    weekday: "short",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  }).format(new Date(submission.preferredSlotAt))
+                ) : submission.anyTimeOk ? (
+                  <span className="text-amber-700">아무 때나 · 배정 필요</span>
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">개인정보 동의</p>
+              <p className="font-medium">
+                {submission.consentPrivacyAt
+                  ? new Date(submission.consentPrivacyAt).toLocaleString("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                    })
+                  : "—"}
               </p>
             </div>
             <div>

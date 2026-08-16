@@ -86,10 +86,18 @@ export const eventAudioUploadSchema = z.object({
 
 export const submissionSchema = z.object({
   name: z.string().min(1, "이름을 입력해주세요"),
-  birthDate: z.string().min(1, "생년월일을 입력해주세요"),
+  // 상담 예약 흐름에서는 받지 않는다. 기존 음성 신청 흐름과의 호환을 위해 선택.
+  birthDate: z.string().optional(),
   phone: z.string().regex(/^01[0-9]{8,9}$/, "올바른 휴대폰 번호를 입력해주세요"),
   subjectType: z.enum(["본인", "부모님", "형제자매", "친구", "기타"]).default("본인"),
   subjectOther: z.string().optional(),
+
+  // ── 상담 예약 ──
+  /** 희망 통화 시각 (ISO). anyTimeOk가 true면 생략한다 */
+  preferredSlotAt: z.string().datetime().optional(),
+  anyTimeOk: z.boolean().optional().default(false),
+  /** 개인정보 수집·이용 동의. 예약 흐름에서는 필수다 (라우트에서 확인) */
+  consentPrivacy: z.boolean().optional(),
   audioFiles: z.array(z.object({
     s3Key: z.string(),
     filename: z.string(),

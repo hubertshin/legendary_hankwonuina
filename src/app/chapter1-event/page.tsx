@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ConfirmationModal } from "@/components/event/confirmation-modal";
-import { SubmitReviewModal } from "@/components/event/submit-review-modal";
 import { Loader2, BookOpen, Quote, NotebookPen } from "lucide-react";
-import { generateSessionId, validateKoreanPhone, cleanPhoneNumber } from "@/lib/event-utils";
+import { cleanPhoneNumber } from "@/lib/event-utils";
+import BookingSteps, { type BookingResult } from "@/components/event/booking-steps";
+import { CALLER_ID_LABEL } from "@/lib/booking/config";
 import { useToast } from "@/components/ui/use-toast";
 import { trackLead } from "@/lib/metaPixel";
 
@@ -32,85 +30,65 @@ const REVIEWS = [
 ];
 
 export default function EventLandingPage() {
-  const [name, setName] = useState("");
-  const [birthYear, setBirthYear] = useState("");
-  const [birthMonth, setBirthMonth] = useState("");
-  const [birthDay, setBirthDay] = useState("");
-  const [phone, setPhone] = useState("");
-
-  // Generate year options (1920 ~ current year)
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showReview, setShowReview] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isDone, setIsDone] = useState(false);
+  const formSectionRef = useRef<HTMLElement>(null);
+  const [bookedLabel, setBookedLabel] = useState<string | null>(null);
   const { toast } = useToast();
 
-
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const numbers = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
-    let formatted = numbers;
-    if (numbers.length > 3) {
-      formatted =
-        numbers.length <= 7
-          ? `${numbers.slice(0, 3)}-${numbers.slice(3)}`
-          : `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
-    }
-    setPhone(formatted);
-  };
-
-  const handleOpenReview = () => {
-    if (!name.trim()) {
-      toast({ title: "이름을 입력해주세요", variant: "destructive" });
-      return;
-    }
-    if (!birthYear || !birthMonth || !birthDay) {
-      toast({ title: "생년월일을 입력해주세요", variant: "destructive" });
-      return;
-    }
-    if (!validateKoreanPhone(phone)) {
-      toast({
-        title: "올바른 휴대폰 번호를 입력해주세요",
-        description: "010-1234-5678 형식으로 입력해주세요",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowReview(true);
-  };
-
-  const handleSubmit = async () => {
-    // Format birthDate as YYYY-MM-DD
-    const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
-
+  /**
+   * 예약 3단계 제출.
+   *
+   * 반드시 서버를 경유한다. 응답을 확인하지 않으면 저장 실패 시에도 완료
+   * 화면을 보여주게 되어 신청이 조용히 유실된다.
+   */
+  const handleBookingSubmit = async (values: BookingResult) => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const response = await fetch("/api/event/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          birthDate,
-          phone: cleanPhoneNumber(phone),
-          subjectType: "본인",
+          name: values.name,
+          phone: cleanPhoneNumber(values.phone),
+          subjectType: values.subjectType,
+          preferredSlotAt: values.preferredSlotAt ?? undefined,
+          anyTimeOk: values.anyTimeOk,
+          consentPrivacy: values.consentPrivacy,
           audioFiles: [],
         }),
       });
-      if (!response.ok) throw new Error("Failed to submit");
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setSubmitError(data?.error ?? "신청에 실패했습니다. 다시 시도해주세요.");
+        return;
+      }
 
       trackLead();
-      setShowReview(false);
-      setShowConfirmation(true);
-      setName("");
-      setBirthYear("");
-      setBirthMonth("");
-      setBirthDay("");
-      setPhone("");
+      setBookedLabel(
+        values.anyTimeOk || !values.preferredSlotAt
+          ? null
+          : new Intl.DateTimeFormat("ko-KR", {
+              timeZone: "Asia/Seoul",
+              month: "long",
+              day: "numeric",
+              weekday: "short",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            }).format(new Date(values.preferredSlotAt))
+      );
+      setIsDone(true);
+      requestAnimationFrame(() =>
+        formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      );
     } catch (error) {
       console.error("Submit error:", error);
+      setSubmitError("네트워크 오류로 신청이 저장되지 않았습니다. 다시 시도해주세요.");
       toast({ title: "제출 실패", description: "다시 시도해주세요.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
@@ -146,149 +124,71 @@ export default function EventLandingPage() {
           </p>
         </section>
 
-        {/* ── FORM: 1. 신청자 정보 ── */}
-        <section className="mb-12">
+        {/* ── FORM: 상담 예약 (트랙 → 시간 → 연락처) ── */}
+        <section ref={formSectionRef} className="mb-12 scroll-mt-24">
           <div className="flex items-center gap-3 mb-6">
             <NotebookPen className="w-7 h-7 flex-shrink-0" style={{ color: "#C9A84C" }} />
             <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#1C1C1E", fontFamily: "var(--font-noto-serif)" }}>
-              무료 자서전 신청 정보 입력
+              무료 자서전 신청
             </h2>
           </div>
           <div
-            className="rounded-3xl p-8 shadow-lg"
+            className="rounded-3xl p-5 md:p-8 shadow-lg"
             style={{
               background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(28,28,30,0.04) 100%)",
               backgroundColor: "#fff",
             }}
           >
-            <div className="space-y-8 max-w-sm mx-auto">
-              {/* 성함 */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-xl font-bold mb-2"
-                  style={{ color: "#1C1C1E" }}
+            {/*
+              신청이 끝나면 폼을 완료 안내로 **교체**한다.
+              폼을 그대로 두면 이미 접수됐는데도 다시 제출할 수 있어 중복
+              신청이 생기고, 사용자도 접수됐는지 확신하지 못한다.
+            */}
+            {isDone ? (
+              <div className="text-center py-4">
+                <p aria-hidden className="text-4xl mb-3">
+                  ✓
+                </p>
+                <h3
+                  className="text-xl md:text-2xl font-bold mb-3"
+                  style={{ color: "#1C1C1E", fontFamily: "var(--font-noto-serif)" }}
                 >
-                  성함 <span style={{ color: "#C9A84C" }}>*</span>
-                </label>
-                <p className="text-base mb-2" style={{ color: "#888" }}>
-                  예) 홍길동
-                </p>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="홍길동"
-                  className="h-16 text-xl px-4 rounded-xl border-2"
-                  style={{ fontSize: "1.25rem" }}
-                />
-              </div>
+                  {bookedLabel ? "신청이 완료됐어요" : "신청이 접수됐어요"}
+                </h3>
 
-              {/* 생년월일 */}
-              <div>
-                <p className="text-xl font-bold mb-2" style={{ color: "#1C1C1E" }}>
-                  태어나신 년도 / 월 / 일 <span style={{ color: "#C9A84C" }}>*</span>
-                </p>
-                <p className="text-base mb-3" style={{ color: "#888" }}>
-                  예) 1950 년 &nbsp; 3 월 &nbsp; 15 일
-                </p>
-                <div className="flex items-center">
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={birthYear}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 4);
-                        setBirthYear(v);
-                      }}
-                      placeholder="1950"
-                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
-                      style={{ fontSize: "1.25rem", width: "6.5rem" }}
-                    />
-                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>년</span>
-                  </div>
-                  <div className="w-5 flex-shrink-0" />
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={birthMonth}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
-                        if (v === "" || (Number(v) >= 1 && Number(v) <= 12)) setBirthMonth(v);
-                      }}
-                      placeholder="3"
-                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
-                      style={{ fontSize: "1.25rem", width: "4rem" }}
-                    />
-                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>월</span>
-                  </div>
-                  <div className="w-5 flex-shrink-0" />
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={birthDay}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
-                        if (v === "" || (Number(v) >= 1 && Number(v) <= 31)) setBirthDay(v);
-                      }}
-                      placeholder="15"
-                      className="h-16 rounded-xl border-2 border-input bg-background px-3 text-center font-bold focus:outline-none focus:ring-2 focus:ring-ring"
-                      style={{ fontSize: "1.25rem", width: "4rem" }}
-                    />
-                    <span className="text-xl font-bold flex-shrink-0" style={{ color: "#555" }}>일</span>
-                  </div>
+                {bookedLabel ? (
+                  <p className="text-xl font-bold mb-5" style={{ color: "#B5965E" }}>
+                    {bookedLabel}
+                  </p>
+                ) : (
+                  <p className="text-base mb-5" style={{ color: "#555" }}>
+                    편한 시간에 연락드리겠습니다.
+                  </p>
+                )}
+
+                <div
+                  className="rounded-2xl p-5 text-left max-w-md mx-auto"
+                  style={{ backgroundColor: "#F8F5EF" }}
+                >
+                  <p className="font-bold text-lg leading-snug" style={{ color: "#1C1C1E" }}>
+                    📞 {CALLER_ID_LABEL}로 전화드립니다
+                  </p>
+                  <p className="text-base mt-2" style={{ color: "#888" }}>
+                    이 번호로 전화가 오면 받아주세요.
+                  </p>
                 </div>
-              </div>
 
-              {/* 전화번호 */}
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="block text-xl font-bold mb-2"
-                  style={{ color: "#1C1C1E" }}
-                >
-                  전화번호 <span style={{ color: "#C9A84C" }}>*</span>
-                </label>
-
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  placeholder="010-0000-0000"
-                  className="h-16 text-xl px-4 rounded-xl border-2"
-                  style={{ fontSize: "1.25rem" }}
-                  inputMode="numeric"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <Button
-                  size="lg"
-                  onClick={handleOpenReview}
-                  disabled={isSubmitting}
-                  className="w-full text-white font-bold rounded-xl shadow-xl transition-all duration-300"
-                  style={{
-                    background: "linear-gradient(135deg, #C9A84C, #b8923e)",
-                    border: "none",
-                    fontSize: "1.375rem",
-                    padding: "1.25rem",
-                    lineHeight: "1.4",
-                  }}
-                >
-                  <span className="flex items-center justify-center">
-                    {isSubmitting && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
-                    신청
-                  </span>
-                </Button>
-                <p className="text-center text-base mt-3" style={{ color: "#888" }}>
-                  입력하신 정보는 자서전 제작에만 사용됩니다
+                <p className="text-base mt-6" style={{ color: "#888" }}>
+                  아래에서 완성될 자서전 샘플을 먼저 읽어보세요.
                 </p>
               </div>
-            </div>
+            ) : (
+              <BookingSteps
+                onSubmit={handleBookingSubmit}
+                isSubmitting={isSubmitting}
+                errorMessage={submitError}
+              />
+            )}
           </div>
         </section>
 
@@ -411,18 +311,6 @@ export default function EventLandingPage() {
 
       <Footer />
 
-      <SubmitReviewModal
-        open={showReview}
-        onOpenChange={setShowReview}
-        name={name}
-        birthYear={birthYear}
-        birthMonth={birthMonth}
-        birthDay={birthDay}
-        phone={phone}
-        isSubmitting={isSubmitting}
-        onConfirm={handleSubmit}
-      />
-      <ConfirmationModal open={showConfirmation} onOpenChange={setShowConfirmation} />
     </div>
   );
 }

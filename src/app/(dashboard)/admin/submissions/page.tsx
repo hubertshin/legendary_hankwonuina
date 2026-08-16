@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/event-utils";
 
-type SortField = 'createdAt' | 'name' | 'birthDate' | 'phone';
+type SortField = 'createdAt' | 'name' | 'preferredSlotAt' | 'phone';
 type SortDirection = 'asc' | 'desc';
 
 export default function SubmissionsPage() {
@@ -65,16 +65,34 @@ export default function SubmissionsPage() {
     return name.includes(query) || phone.includes(query);
   });
 
-  // Sort filtered submissions
+  // "8월 18일 (화) 오후 3시" — 상담사가 한눈에 읽을 형식
+function formatSlotLabel(value: string | Date): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(value));
+}
+
+// Sort filtered submissions
   const sortedSubmissions = [...filteredSubmissions].sort((a, b) => {
     let aValue: any;
     let bValue: any;
 
     switch (sortField) {
       case 'createdAt':
-      case 'birthDate':
         aValue = new Date(a[sortField]).getTime();
         bValue = new Date(b[sortField]).getTime();
+        break;
+      case 'preferredSlotAt':
+        // 시간 미정("아무 때나") 건은 항상 뒤로 보낸다. 정렬 방향과 무관하게
+        // 날짜가 있는 건이 먼저 보여야 오늘 통화할 목록을 찾기 쉽다.
+        aValue = a.preferredSlotAt ? new Date(a.preferredSlotAt).getTime() : Number.MAX_SAFE_INTEGER;
+        bValue = b.preferredSlotAt ? new Date(b.preferredSlotAt).getTime() : Number.MAX_SAFE_INTEGER;
         break;
       default:
         aValue = a[sortField];
@@ -174,13 +192,13 @@ export default function SubmissionsPage() {
                     variant="ghost"
                     size="sm"
                     className="-ml-3 h-8"
-                    onClick={() => handleSort('birthDate')}
+                    onClick={() => handleSort('preferredSlotAt')}
                   >
-                    생년월일
-                    {sortField === 'birthDate' && (
+                    희망 통화
+                    {sortField === 'preferredSlotAt' && (
                       sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
                     )}
-                    {sortField !== 'birthDate' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                    {sortField !== 'preferredSlotAt' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
                   </Button>
                 </TableHead>
                 <TableHead>
@@ -197,12 +215,13 @@ export default function SubmissionsPage() {
                     {sortField !== 'phone' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
                   </Button>
                 </TableHead>
+                <TableHead>구분</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedSubmissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     신청 내역이 없습니다.
                   </TableCell>
                 </TableRow>
@@ -226,9 +245,25 @@ export default function SubmissionsPage() {
                         {submission.name}
                       </TableCell>
                       <TableCell>
-                        {new Date(submission.birthDate).toLocaleDateString("ko-KR", { timeZone: 'Asia/Seoul' })}
+                        {submission.preferredSlotAt ? (
+                          <span className="font-medium">
+                            {formatSlotLabel(submission.preferredSlotAt)}
+                          </span>
+                        ) : submission.anyTimeOk ? (
+                          // 배정하지 않으면 신청자가 아무 연락도 못 받는다. 눈에 띄게 표시한다.
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">
+                            아무 때나 · 배정 필요
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>{formatPhoneNumber(submission.phone)}</TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {submission.subjectType ?? '—'}
+                        </span>
+                      </TableCell>
                     </TableRow>
                   );
                 })
