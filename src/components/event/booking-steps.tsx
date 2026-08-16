@@ -360,7 +360,13 @@ function StepTime({
                           className="rounded-xl border-2 bg-white py-3 text-lg font-medium active:scale-[0.98] min-h-[3rem]"
                           style={{ borderColor: "#E5E0D6", color: INK }}
                         >
-                          {slot.clock}
+                          {/*
+                            24시간제(14:00)가 아니라 "오후 2시"로 보여준다.
+                            어르신 대상이라 14시를 오후 2시로 환산해 읽어야 하는
+                            부담을 없앤다. 그룹 머리글(오후·저녁)과 겹쳐 보이지만
+                            버튼만 떼어 봐도 언제인지 알 수 있는 편이 안전하다.
+                          */}
+                          {slot.label}
                         </button>
                       ))}
                     </div>
