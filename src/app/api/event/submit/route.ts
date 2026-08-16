@@ -4,6 +4,16 @@ import { cleanPhoneNumber } from "@/lib/event-utils";
 import { prisma } from "@/lib/db";
 import { slotUnavailableReason } from "@/lib/booking/slots";
 import { BOOKING } from "@/lib/booking/config";
+import {
+  GLOBAL_KEY,
+  SUBMIT_ATTEMPT_RULE,
+  SUBMIT_GLOBAL_RULE,
+  SUBMIT_SUCCESS_RULE,
+  checkRateLimit,
+  clientKey,
+  consumeRateLimit,
+  peekRateLimit,
+} from "@/lib/booking/ratelimit";
 
 /**
  * POST /api/event/submit
@@ -23,6 +33,45 @@ const SLOT_ERRORS: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+  // 시도 한도와 성공 한도를 나눈다. 입력 실수로 검증 오류를 몇 번 받는 것은
+  // 정상이므로, 그것 때문에 정상 사용자가 잠기면 안 된다.
+  const attemptKey = clientKey(request, "submit-attempt");
+  const successKey = clientKey(request, "submit-success");
+
+  const attempts = checkRateLimit(attemptKey, SUBMIT_ATTEMPT_RULE);
+  if (!attempts.allowed) {
+    return NextResponse.json(
+      {
+        error: `요청이 너무 많습니다. ${Math.ceil(
+          attempts.retryAfterSeconds / 60
+        )}분 후 다시 시도해주세요.`,
+      },
+      { status: 429, headers: { "Retry-After": String(attempts.retryAfterSeconds) } }
+    );
+  }
+
+  const successes = peekRateLimit(successKey, SUBMIT_SUCCESS_RULE);
+  if (!successes.allowed) {
+    return NextResponse.json(
+      {
+        error: `이미 여러 건을 신청하셨습니다. ${Math.ceil(
+          successes.retryAfterSeconds / 60
+        )}분 후 다시 시도하시거나 전화로 문의해주세요.`,
+      },
+      { status: 429, headers: { "Retry-After": String(successes.retryAfterSeconds) } }
+    );
+  }
+
+  // IP 판정이 뚫려도 피해를 묶어두는 최후 방어선.
+  const global = peekRateLimit(GLOBAL_KEY, SUBMIT_GLOBAL_RULE);
+  if (!global.allowed) {
+    console.warn("[event/submit] 전역 신청 한도 도달 — 스팸 가능성 확인 필요");
+    return NextResponse.json(
+      { error: "잠시 접수가 몰리고 있습니다. 1분 후 다시 시도해주세요." },
+      { status: 429, headers: { "Retry-After": String(global.retryAfterSeconds) } }
+    );
+  }
+
   try {
     const body = await request.json();
 
@@ -98,6 +147,10 @@ export async function POST(request: Request) {
         },
       });
     });
+
+    // 슬롯을 실제로 점유한 시점에만 성공 한도를 소비한다.
+    consumeRateLimit(successKey, SUBMIT_SUCCESS_RULE);
+    consumeRateLimit(GLOBAL_KEY, SUBMIT_GLOBAL_RULE);
 
     return NextResponse.json({
       submissionId: submission.id,
