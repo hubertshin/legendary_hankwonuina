@@ -26,6 +26,8 @@ interface Cell {
   startAt: string | null;
   state: CellState;
   bookedNames?: string[];
+  /** 칸 시작과 어긋난 실제 약속 시각 ("14:30") */
+  bookedClocks?: string[];
   reason?: string | null;
 }
 
@@ -443,19 +445,37 @@ function SlotCell({
         ? "✕"
         : "";
 
+  // 칸에는 14:00이라고 적혀 있는데 실제 약속이 14:30이면 전화를 놓친다.
+  // 슬롯 길이를 바꾸기 전에 잡힌 예약이 여기 걸린다.
+  const offGridClock = cell.bookedClocks?.[0];
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!interactive || isPending}
-      title={cell.reason || CELL_TITLES[cell.state]}
+      title={
+        cell.reason ||
+        (offGridClock
+          ? `${offGridClock}에 ${cell.bookedNames?.join(", ")} 님과 통화 약속이 있습니다`
+          : CELL_TITLES[cell.state])
+      }
       aria-label={`${cell.startAt ?? ""} ${CELL_TITLES[cell.state]}`}
       // 44px는 손가락으로 누를 수 있는 최소 크기다. 그 아래로 내려가면 오조작이 는다.
       className={`flex h-11 w-full items-center justify-center overflow-hidden rounded-md px-1 text-[11px] font-medium leading-none transition-colors ${
         CELL_STYLES[cell.state]
       } ${isPending ? "opacity-50" : ""}`}
     >
-      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="truncate">{label}</span>}
+      {isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : offGridClock ? (
+        <span className="flex flex-col items-center leading-tight">
+          <span className="truncate">{label}</span>
+          <span className="text-[9px] font-semibold opacity-90">{offGridClock}</span>
+        </span>
+      ) : (
+        <span className="truncate">{label}</span>
+      )}
     </button>
   );
 }
