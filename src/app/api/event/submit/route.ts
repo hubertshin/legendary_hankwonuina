@@ -4,6 +4,7 @@ import { cleanPhoneNumber } from "@/lib/event-utils";
 import { prisma } from "@/lib/db";
 import { slotUnavailableReason } from "@/lib/booking/slots";
 import { BOOKING } from "@/lib/booking/config";
+import { notifyNewBooking } from "@/lib/notify";
 import {
   GLOBAL_KEY,
   SUBMIT_ATTEMPT_RULE,
@@ -153,6 +154,29 @@ export async function POST(request: Request) {
     // 슬롯을 실제로 점유한 시점에만 성공 한도를 소비한다.
     consumeOptional(successKey, SUBMIT_SUCCESS_RULE);
     consumeRateLimit(GLOBAL_KEY, SUBMIT_GLOBAL_RULE);
+
+    // 운영자 알림. 이미 저장이 끝났으므로 실패해도 응답은 성공이어야 한다.
+    // notifyNewBooking은 예외를 던지지 않지만, 방어적으로 한 번 더 감싼다.
+    try {
+      await notifyNewBooking({
+        submissionId: submission.id,
+        name: submission.name,
+        phone: submission.phone,
+        subjectType: submission.subjectType,
+        // 현재 예약 폼은 성함·연락처만 받는다. subjectOther는 기존 음성
+        // 신청 흐름에서만 채워지므로 있으면 함께 보여준다.
+        subjectName: submission.subjectOther,
+        subjectAgeRange: null,
+        question: null,
+        preferredSlotAt: submission.preferredSlotAt
+          ? submission.preferredSlotAt.toISOString()
+          : null,
+        anyTimeOk: submission.anyTimeOk,
+        createdAt: submission.createdAt.toISOString(),
+      });
+    } catch (error) {
+      console.error("[event/submit] 알림 처리 중 예외 (신청은 저장됨):", error);
+    }
 
     return NextResponse.json({
       submissionId: submission.id,
