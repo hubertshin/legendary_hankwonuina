@@ -288,3 +288,17 @@ enum SubmissionStatus {
   PROCESSING  // 작업중
   COMPLETED   // 완료
 }
+
+/// 상담 불가 시간.
+///
+/// 운영 시간 안이지만 그날 그 시각만 비워야 할 때 쓴다(외부 일정, 휴가 등).
+/// 요일 단위 운영 시간이나 공휴일과 달리 **한 슬롯 단위**로 막는다.
+model SlotBlock {
+  id        String   @id @default(cuid())
+  /// 막을 슬롯의 시작 시각. 슬롯 하나가 곧 한 행이므로 중복을 막는다.
+  startAt   DateTime @unique
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([startAt])
+}

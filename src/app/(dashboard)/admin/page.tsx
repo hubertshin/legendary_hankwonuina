@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, ArrowRight } from "lucide-react";
+import { Users, ArrowRight , CalendarX} from "lucide-react";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -23,7 +23,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid gap-4 md:grid-cols-1 max-w-md mx-auto">
+      <div className="grid gap-4 md:grid-cols-2 max-w-3xl mx-auto">
         <Link href="/admin/submissions">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -36,6 +36,23 @@ export default async function AdminPage() {
               </p>
               <Button variant="outline" className="w-full">
                 신청자 목록 보기 <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/schedule">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">상담 불가 시간 관리</CardTitle>
+              <CalendarX className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                시간표에서 전화 상담이 어려운 시간을 막습니다.
+              </p>
+              <Button variant="outline" className="w-full">
+                시간표 열기 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardContent>
           </Card>
