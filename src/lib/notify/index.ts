@@ -1,4 +1,5 @@
 import { emailChannel } from "./email";
+import { resendChannel } from "./resend";
 import type { BookingNotification, NotifyChannel } from "./types";
 
 export type { BookingNotification, NotifyChannel };
@@ -6,10 +7,13 @@ export type { BookingNotification, NotifyChannel };
 /**
  * 등록된 알림 채널.
  *
+ * 설정된 채널로만 발송한다. 둘 다 설정하면 둘 다 보내지므로, 보통은
+ * 하나만 설정한다. Resend를 먼저 두어 설정돼 있으면 그쪽이 쓰이게 했다.
+ *
  * 나중에 알림톡(고객 대상)이나 텔레그램(운영자 대상)을 추가하려면 여기에
  * 채널만 밀어 넣으면 된다. 호출부는 바뀌지 않는다.
  */
-const CHANNELS: NotifyChannel[] = [emailChannel];
+const CHANNELS: NotifyChannel[] = [resendChannel, emailChannel];
 
 /**
  * 신청 알림을 보낸다.
