@@ -119,17 +119,33 @@ export default function SubmissionsPage() {
     return name.includes(query) || phone.includes(query);
   });
 
-  /**
+  /** 신규로 볼 기간 (일). 이보다 오래된 신청은 배지를 달지 않는다 */
+const NEW_WINDOW_DAYS = 7;
+
+/**
  * 아직 손대지 않은 신규 신청인가.
  *
- * status만으로 판정하면 안 된다. 통화 후 "부재"로 기록하면 아직 연락이 닿지
- * 않았다는 뜻으로 status가 PENDING으로 되돌아가는데, 그 건은 이미 확인해서
- * 전화까지 건 것이므로 신규가 아니다.
+ * 세 가지를 모두 만족해야 한다.
  *
- * 통화 기록이 아예 없는 건만 신규로 본다.
+ * 1. 최근 7일 안에 들어온 신청
+ *    오래 묵은 건까지 "신규"로 두면 배지가 목록 절반에 붙어 아무것도
+ *    구별해주지 못한다. 배지의 쓸모는 오늘 처리할 것을 골라내는 데 있다.
+ *
+ * 2. status가 PENDING
+ *
+ * 3. 통화 기록(callResult)이 없음
+ *    status만으로 판정하면 안 된다. 통화 후 "부재"로 기록하면 아직 연락이
+ *    닿지 않았다는 뜻으로 status가 PENDING으로 되돌아가는데, 그 건은 이미
+ *    확인해서 전화까지 건 것이므로 신규가 아니다.
  */
 function isNewSubmission(submission: any): boolean {
-  return submission.status === "PENDING" && !submission.callResult;
+  if (submission.status !== "PENDING") return false;
+  if (submission.callResult) return false;
+
+  const createdAt = new Date(submission.createdAt).getTime();
+  if (Number.isNaN(createdAt)) return false;
+
+  return Date.now() - createdAt <= NEW_WINDOW_DAYS * 86_400_000;
 }
 
 // "8월 18일 (화) 오후 3시" — 상담사가 한눈에 읽을 형식
