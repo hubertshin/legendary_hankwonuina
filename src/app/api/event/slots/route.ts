@@ -32,11 +32,18 @@ export async function GET(request: Request) {
       select: { preferredSlotAt: true },
     });
 
+    // 운영자가 막아둔 시간
+    const blocks = await prisma.slotBlock.findMany({
+      where: { startAt: { gte: now, lte: horizon } },
+      select: { startAt: true },
+    });
+
     const days = buildDayViews({
       now,
       occupied: taken
         .filter((t) => t.preferredSlotAt !== null)
         .map((t) => ({ startAt: (t.preferredSlotAt as Date).toISOString() })),
+      blocked: blocks.map((b) => b.startAt.toISOString()),
     });
 
     return NextResponse.json({

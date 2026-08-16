@@ -33,6 +33,7 @@ const SLOT_ERRORS: Record<string, string> = {
   too_soon: `상담 준비를 위해 ${BOOKING.minLeadHours}시간 뒤부터 예약할 수 있습니다.`,
   out_of_range: `예약은 ${BOOKING.maxAdvanceDays}일 뒤까지 가능합니다.`,
   not_a_slot: "선택할 수 없는 시간입니다. 목록에서 다시 골라주세요.",
+  blocked: "그 시간은 상담이 어렵습니다. 다른 시간을 선택해주세요.",
 };
 
 export async function POST(request: Request) {
@@ -123,11 +124,19 @@ export async function POST(request: Request) {
           select: { preferredSlotAt: true },
         });
 
+        // 화면을 열어둔 사이에 운영자가 막았을 수 있다.
+        // 목록에서 사라진 것만으로는 충분하지 않아 저장 직전에 다시 본다.
+        const block = await tx.slotBlock.findUnique({
+          where: { startAt: slotAt },
+          select: { id: true },
+        });
+
         const reason = slotUnavailableReason(slotAt, {
           now,
           occupied: taken
             .filter((t) => t.preferredSlotAt !== null)
             .map((t) => ({ startAt: (t.preferredSlotAt as Date).toISOString() })),
+          blocked: block ? [slotAt.toISOString()] : [],
         });
 
         if (reason) {

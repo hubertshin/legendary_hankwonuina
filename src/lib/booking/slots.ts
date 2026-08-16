@@ -50,6 +50,13 @@ export interface OccupiedSlot {
 export interface SlotContext {
   now: Date;
   occupied: OccupiedSlot[];
+  /**
+   * 운영자가 막아둔 슬롯 시작 시각 (ISO UTC).
+   *
+   * 운영 시간 안이지만 그날 그 시각만 비워야 할 때 쓴다(외부 일정, 휴가 등).
+   * 넘기지 않으면 아무것도 막지 않는다 — 기존 호출부를 깨지 않기 위해서다.
+   */
+  blocked?: string[];
 }
 
 /**
@@ -82,6 +89,13 @@ export function candidateSlotStarts(dateKey: string): Date[] {
   return starts;
 }
 
+/** 운영자가 막아둔 슬롯인가 */
+export function isBlocked(slotStart: Date, blocked: string[] | undefined): boolean {
+  if (!blocked || blocked.length === 0) return false;
+  const target = slotStart.getTime();
+  return blocked.some((iso) => new Date(iso).getTime() === target);
+}
+
 function bookedCount(slotStart: Date, occupied: OccupiedSlot[]): number {
   const target = slotStart.toISOString();
   return occupied.filter((o) => o.startAt === target).length;
@@ -108,7 +122,12 @@ export function isWithinBookableRange(slotStart: Date, now: Date): boolean {
  *
  * 단일 불리언으로 두면 잘못된 시각을 보냈는데도 "마감됐습니다"라고 답하게 된다.
  */
-export type SlotUnavailableReason = "not_a_slot" | "too_soon" | "out_of_range" | "full";
+export type SlotUnavailableReason =
+  | "not_a_slot"
+  | "too_soon"
+  | "out_of_range"
+  | "full"
+  | "blocked";
 
 export function slotUnavailableReason(
   slotStart: Date,
@@ -126,6 +145,11 @@ export function slotUnavailableReason(
     return "too_soon";
   }
   if (!isWithinBookableRange(slotStart, ctx.now)) return "out_of_range";
+
+  // 차단은 정원보다 먼저 본다.
+  // 막아둔 시간은 자리가 비어 있든 아니든 예약을 받지 않는다는 뜻이다.
+  if (isBlocked(slotStart, ctx.blocked)) return "blocked";
+
   if (bookedCount(slotStart, ctx.occupied) >= BOOKING.capacityPerSlot) return "full";
 
   return null;
