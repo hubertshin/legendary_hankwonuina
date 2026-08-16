@@ -9,9 +9,11 @@ import {
   SUBMIT_ATTEMPT_RULE,
   SUBMIT_GLOBAL_RULE,
   SUBMIT_SUCCESS_RULE,
-  checkRateLimit,
+  checkOptional,
   clientKey,
+  consumeOptional,
   consumeRateLimit,
+  peekOptional,
   peekRateLimit,
 } from "@/lib/booking/ratelimit";
 
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
   const attemptKey = clientKey(request, "submit-attempt");
   const successKey = clientKey(request, "submit-success");
 
-  const attempts = checkRateLimit(attemptKey, SUBMIT_ATTEMPT_RULE);
+  const attempts = checkOptional(attemptKey, SUBMIT_ATTEMPT_RULE);
   if (!attempts.allowed) {
     return NextResponse.json(
       {
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const successes = peekRateLimit(successKey, SUBMIT_SUCCESS_RULE);
+  const successes = peekOptional(successKey, SUBMIT_SUCCESS_RULE);
   if (!successes.allowed) {
     return NextResponse.json(
       {
@@ -149,7 +151,7 @@ export async function POST(request: Request) {
     });
 
     // 슬롯을 실제로 점유한 시점에만 성공 한도를 소비한다.
-    consumeRateLimit(successKey, SUBMIT_SUCCESS_RULE);
+    consumeOptional(successKey, SUBMIT_SUCCESS_RULE);
     consumeRateLimit(GLOBAL_KEY, SUBMIT_GLOBAL_RULE);
 
     return NextResponse.json({
