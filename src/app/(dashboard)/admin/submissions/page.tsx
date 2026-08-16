@@ -12,8 +12,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/event-utils";
+import { CallLogCell } from "@/components/admin/call-log-cell";
 
 type SortField = 'createdAt' | 'name' | 'preferredSlotAt' | 'phone';
 type SortDirection = 'asc' | 'desc';
@@ -26,6 +27,12 @@ export default function SubmissionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+
+  // 선택 삭제
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubmissions();
@@ -41,6 +48,52 @@ export default function SubmissionsPage() {
       console.error('Error fetching submissions:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setConfirmDelete(false);
+  };
+
+  /** 현재 페이지 전체 선택/해제. 보이지 않는 항목까지 지우는 사고를 막으려고
+      전체가 아니라 **현재 페이지**만 대상으로 한다. */
+  const togglePageSelection = (ids: string[], checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+      return next;
+    });
+    setConfirmDelete(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch('/api/admin/submissions/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setDeleteError(data?.error ?? '삭제하지 못했습니다.');
+        return;
+      }
+      setSelectedIds(new Set());
+      setConfirmDelete(false);
+      await fetchSubmissions();
+    } catch {
+      setDeleteError('네트워크 오류로 삭제되지 않았습니다.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -153,12 +206,78 @@ function formatSlotLabel(value: string | Date): string {
         </div>
       </div>
 
+      {/* 선택 삭제 바 — 선택했을 때만 나타난다 */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
+          <span className="font-medium">{selectedIds.size}건 선택됨</span>
+
+          {confirmDelete ? (
+            <>
+              {/* 되돌릴 수 없는 작업이라 한 번 더 확인받는다 */}
+              <span className="text-sm text-destructive">
+                삭제하면 되돌릴 수 없습니다. 정말 삭제하시겠어요?
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {selectedIds.size}건 삭제
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDelete(false)}
+                disabled={isDeleting}
+              >
+                취소
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                선택 삭제
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                선택 해제
+              </Button>
+            </>
+          )}
+
+          {deleteError && (
+            <span role="alert" className="text-sm text-destructive">
+              {deleteError}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Submissions Table */}
       <Card>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="이 페이지 전체 선택"
+                    className="h-4 w-4 cursor-pointer"
+                    checked={
+                      paginatedSubmissions.length > 0 &&
+                      paginatedSubmissions.every((s: any) => selectedIds.has(s.id))
+                    }
+                    onChange={(e) =>
+                      togglePageSelection(
+                        paginatedSubmissions.map((s: any) => s.id),
+                        e.target.checked
+                      )
+                    }
+                  />
+                </TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
@@ -216,19 +335,32 @@ function formatSlotLabel(value: string | Date): string {
                   </Button>
                 </TableHead>
                 <TableHead>구분</TableHead>
+                <TableHead className="min-w-[16rem]">통화 기록 · 메모</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedSubmissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     신청 내역이 없습니다.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedSubmissions.map((submission) => {
                   return (
-                    <TableRow key={submission.id}>
+                    <TableRow
+                      key={submission.id}
+                      data-state={selectedIds.has(submission.id) ? "selected" : undefined}
+                    >
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          aria-label={`${submission.name} 선택`}
+                          className="h-4 w-4 cursor-pointer"
+                          checked={selectedIds.has(submission.id)}
+                          onChange={() => toggleSelect(submission.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <div>{new Date(submission.createdAt).toLocaleDateString("ko-KR", { timeZone: 'Asia/Seoul' })}</div>
@@ -263,6 +395,15 @@ function formatSlotLabel(value: string | Date): string {
                         <span className="text-sm text-muted-foreground">
                           {submission.subjectType ?? '—'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <CallLogCell
+                          id={submission.id}
+                          callResult={submission.callResult ?? null}
+                          calledAt={submission.calledAt ?? null}
+                          adminNotes={submission.adminNotes ?? null}
+                          onChanged={fetchSubmissions}
+                        />
                       </TableCell>
                     </TableRow>
                   );

@@ -39,7 +39,8 @@ export async function GET(request: Request) {
     // Build query with optional status filter
     let query = `
       SELECT id, name, "birthDate", phone, "subjectType", "subjectOther", "audioFiles", status,
-             "preferredSlotAt", "anyTimeOk", "consentPrivacyAt", "createdAt", "updatedAt"
+             "preferredSlotAt", "anyTimeOk", "consentPrivacyAt",
+             "calledAt", "callResult", "adminNotes", "createdAt", "updatedAt"
       FROM "Submission"
     `;
     const values: (string | number)[] = [];

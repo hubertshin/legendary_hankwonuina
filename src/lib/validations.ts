@@ -110,7 +110,17 @@ export const submissionSchema = z.object({
 
 export const updateSubmissionSchema = z.object({
   status: z.enum(["PENDING", "CONTACTED", "PROCESSING", "COMPLETED"]).optional(),
-  adminNotes: z.string().optional(),
+  adminNotes: z.string().max(5000).optional(),
+  /** 통화 결과. null을 보내면 "아직 연락 안 함"으로 되돌린다 */
+  callResult: z
+    .enum(["CONNECTED", "NO_ANSWER", "CALLBACK_REQUESTED"])
+    .nullable()
+    .optional(),
+});
+
+/** 목록에서 여러 건을 한 번에 삭제 */
+export const bulkDeleteSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, "삭제할 항목을 선택해주세요").max(100),
 });
 
 // Type exports
