@@ -119,7 +119,20 @@ export default function SubmissionsPage() {
     return name.includes(query) || phone.includes(query);
   });
 
-  // "8월 18일 (화) 오후 3시" — 상담사가 한눈에 읽을 형식
+  /**
+ * 아직 손대지 않은 신규 신청인가.
+ *
+ * status만으로 판정하면 안 된다. 통화 후 "부재"로 기록하면 아직 연락이 닿지
+ * 않았다는 뜻으로 status가 PENDING으로 되돌아가는데, 그 건은 이미 확인해서
+ * 전화까지 건 것이므로 신규가 아니다.
+ *
+ * 통화 기록이 아예 없는 건만 신규로 본다.
+ */
+function isNewSubmission(submission: any): boolean {
+  return submission.status === "PENDING" && !submission.callResult;
+}
+
+// "8월 18일 (화) 오후 3시" — 상담사가 한눈에 읽을 형식
 function formatSlotLabel(value: string | Date): string {
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -376,7 +389,14 @@ function formatSlotLabel(value: string | Date): string {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {submission.name}
+                        <span className="inline-flex items-center gap-1.5">
+                          {isNewSubmission(submission) && (
+                            <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                              신규
+                            </span>
+                          )}
+                          {submission.name}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {submission.preferredSlotAt ? (
