@@ -150,10 +150,48 @@ export function resolveClientIp(request: Request): string | null {
   return null;
 }
 
-/** 제한 버킷 키. IP를 신뢰할 수 없으면 공용 버킷으로 묶는다. */
-export function clientKey(request: Request, scope: string): string {
+/**
+ * 제한 버킷 키. IP를 신뢰할 수 없으면 null.
+ *
+ * 예전에는 이 경우 모두를 `${scope}:shared` 한 버킷에 묶었는데, 그러면
+ * **개인별 한도가 사이트 전체 한도가 된다.** 성공 한도 3건/10분이 전체에
+ * 걸려 네 번째 신청자부터 "이미 여러 건을 신청하셨습니다"를 보게 됐다.
+ *
+ * 개인 식별이 불가능하면 개인별 제한은 적용하지 않고, 전역 한도
+ * (SUBMIT_GLOBAL_RULE)로만 막는 것이 맞다. 전역 한도는 애초에 이런
+ * 경우를 위한 방어선이다.
+ */
+export function clientKey(request: Request, scope: string): string | null {
   const ip = resolveClientIp(request);
-  return ip ? `${scope}:${ip}` : `${scope}:shared`;
+  return ip ? `${scope}:${ip}` : null;
+}
+
+/** 키가 없으면(식별 불가) 통과시킨다. */
+export function checkOptional(
+  key: string | null,
+  rule: RateLimitRule,
+  now = Date.now()
+): RateLimitResult {
+  if (key === null) return { allowed: true, remaining: rule.limit, retryAfterSeconds: 0 };
+  return checkRateLimit(key, rule, now);
+}
+
+export function peekOptional(
+  key: string | null,
+  rule: RateLimitRule,
+  now = Date.now()
+): RateLimitResult {
+  if (key === null) return { allowed: true, remaining: rule.limit, retryAfterSeconds: 0 };
+  return peekRateLimit(key, rule, now);
+}
+
+export function consumeOptional(
+  key: string | null,
+  rule: RateLimitRule,
+  now = Date.now()
+): void {
+  if (key === null) return;
+  consumeRateLimit(key, rule, now);
 }
 
 /** 테스트에서 상태를 초기화한다. */
