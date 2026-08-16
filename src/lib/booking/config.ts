@@ -12,8 +12,14 @@ export interface DayWindow {
 }
 
 export const BOOKING = {
-  /** 상담 1건 길이 = 슬롯 단위 (분) */
-  slotMinutes: 30,
+  /**
+   * 상담 1건 길이 = 슬롯 단위 (분).
+   *
+   * 이 값 하나가 예약 화면·운영자 시간표·정원 계산의 기준이다.
+   * 바꾸면 기존 예약이 격자에서 벗어날 수 있으므로 slotCoveringInstant가
+   * 옛 예약을 포함하는 칸으로 흡수한다.
+   */
+  slotMinutes: 60,
 
   /** 요일별 운영 시간. null이면 휴무. 0=일 … 6=토 */
   windowsByWeekday: {

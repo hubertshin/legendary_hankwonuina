@@ -116,9 +116,15 @@ export async function POST(request: Request) {
         const now = new Date();
 
         // 같은 슬롯을 이미 점유한 신청을 세어 정원을 확인한다.
+        //
+        // 시각이 정확히 같은 건만 찾으면 안 된다. 슬롯 길이를 30분에서
+        // 1시간으로 바꾸기 전에 잡힌 14:30 예약은 14:00과 시각이 다르므로
+        // 조회에서 빠지고, 그 칸이 비어 있는 것으로 판정돼 같은 시간에
+        // 두 통화가 잡힌다. 슬롯 **구간**으로 찾는다.
+        const slotEnd = new Date(slotAt.getTime() + BOOKING.slotMinutes * 60_000);
         const taken = await tx.submission.findMany({
           where: {
-            preferredSlotAt: slotAt,
+            preferredSlotAt: { gte: slotAt, lt: slotEnd },
             status: { in: ["PENDING", "CONTACTED"] },
           },
           select: { preferredSlotAt: true },
