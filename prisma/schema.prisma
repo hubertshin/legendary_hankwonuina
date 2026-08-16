@@ -234,13 +234,29 @@ model Submission {
 
   // Personal Info
   name            String
-  birthDate       DateTime
+  // 상담 예약 단계에서는 생년월일을 받지 않는다. 통화에서 물으면 되는 정보를
+  // 폼에서 요구하면 전환만 깎인다. 기존 데이터 호환을 위해 선택으로 바꿨다.
+  birthDate       DateTime?
   phone           String
   subjectType     String           // 본인, 부모님, 형제자매, 친구, 기타
   subjectOther    String?          // subjectType이 '기타'일 때
 
+  // ── 상담 예약 (전화 통화 희망 시각) ──
+  /// 희망 통화 시각. anyTimeOk가 true면 null이며 운영자가 배정한다.
+  preferredSlotAt DateTime?
+  /// "아무 때나 괜찮아요" — 시간 선택 부담으로 이탈하는 층을 건지기 위한 옵션
+  anyTimeOk       Boolean          @default(false)
+  /// 개인정보 수집·이용 동의 시각 (법적 증빙)
+  consentPrivacyAt DateTime?
+
   // Audio Files (JSON array)
   audioFiles      Json             // [{s3Key, filename, duration, mimeType, size, clipIndex}]
+
+  // ── 통화 기록 ──
+  /// 마지막 통화 시도 시각. 통화했는지 여부는 이 값의 존재로 판단한다.
+  calledAt        DateTime?
+  /// 통화 결과. 부재를 별도로 구분해야 재시도 대상을 찾을 수 있다.
+  callResult      CallResult?
 
   // Metadata
   status          SubmissionStatus @default(PENDING)
@@ -250,6 +266,14 @@ model Submission {
 
   @@index([status])
   @@index([createdAt])
+  @@index([preferredSlotAt])
+}
+
+/// 통화 결과. "전화했는데 못 받음"을 구분하지 않으면 재시도 대상을 알 수 없다.
+enum CallResult {
+  CONNECTED           // 통화 완료
+  NO_ANSWER           // 부재중
+  CALLBACK_REQUESTED  // 나중에 다시 요청
 }
 
 enum SubmissionStatus {
