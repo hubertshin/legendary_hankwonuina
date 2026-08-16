@@ -3,9 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { BOOKING } from "@/lib/booking/config";
-import { dateKeyToInstant, formatKstClock, kstDateKey } from "@/lib/booking/kst";
-import { candidateSlotStarts, slotCoveringInstant } from "@/lib/booking/slots";
-import { buildTimetable, type BookedEntry } from "@/lib/booking/timetable";
+import { dateKeyToInstant, kstDateKey } from "@/lib/booking/kst";
+import { candidateSlotStarts } from "@/lib/booking/slots";
+import { buildTimetable } from "@/lib/booking/timetable";
 
 /**
  * 상담 불가 시간 관리.
@@ -66,22 +66,11 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    // 예약을 '그 시각을 품는 칸'에 넣는다.
-    //
-    // 슬롯 길이를 30분에서 1시간으로 바꾸기 전에 잡힌 14:30 예약은 어느 칸과도
-    // 시각이 일치하지 않는다. 시각으로만 맞추면 그 예약이 표에서 사라지고,
-    // 운영자는 그 시간이 비어 있는 줄 알고 막아버린다.
-    const bookedBySlot = new Map<number, BookedEntry[]>();
+    const bookedBySlot = new Map<number, string[]>();
     for (const row of booked) {
       if (!row.preferredSlotAt) continue;
-      const cellStart = slotCoveringInstant(row.preferredSlotAt);
-      if (!cellStart) continue; // 운영 시간 밖으로 밀려난 예약은 표에 자리가 없다
-      const key = cellStart.getTime();
-      const entry: BookedEntry = {
-        name: row.name,
-        clock: formatKstClock(row.preferredSlotAt),
-      };
-      bookedBySlot.set(key, [...(bookedBySlot.get(key) ?? []), entry]);
+      const key = row.preferredSlotAt.getTime();
+      bookedBySlot.set(key, [...(bookedBySlot.get(key) ?? []), row.name]);
     }
 
     const blockedBySlot = new Map<number, string | null>(
@@ -152,25 +141,15 @@ export async function POST(request: Request) {
     //
     // 막아도 그 예약이 사라지지는 않는다. 오히려 시간표에서 예약이 가려져
     // 운영자가 통화 약속을 놓칠 수 있다. 예약을 정리하는 것이 먼저다.
-    //
-    // 시각이 정확히 같은지가 아니라 **칸 구간에 들어오는지**로 본다.
-    // 14:00 칸을 막을 때 14:30에 잡힌 옛 예약도 걸러내야 한다.
-    const span = BOOKING.slotMinutes * 60_000;
-    const windowStart = new Date(Math.min(...valid.map((d) => d.getTime())));
-    const windowEnd = new Date(Math.max(...valid.map((d) => d.getTime())) + span);
-
     const conflicts = await prisma.submission.findMany({
       where: {
-        preferredSlotAt: { gte: windowStart, lt: windowEnd },
+        preferredSlotAt: { in: valid },
         status: { in: ["PENDING", "CONTACTED"] },
       },
       select: { preferredSlotAt: true },
     });
     const conflictKeys = new Set(
-      conflicts
-        .map((c) => slotCoveringInstant(c.preferredSlotAt as Date))
-        .filter((d): d is Date => d !== null)
-        .map((d) => d.getTime())
+      conflicts.map((c) => (c.preferredSlotAt as Date).getTime())
     );
     const blockable = valid.filter((d) => !conflictKeys.has(d.getTime()));
 

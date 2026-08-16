@@ -38,13 +38,6 @@ export interface TimetableCell {
   state: CellState;
   /** booked일 때 신청자 이름 (동명이인 대비로 여러 명일 수 있다) */
   bookedNames?: string[];
-  /**
-   * 칸의 시작 시각과 실제 통화 약속 시각이 다를 때의 실제 시각 ("14:30").
-   *
-   * 슬롯 길이를 바꾸기 전에 잡힌 예약이 여기 걸린다. 칸에는 14:00이라고
-   * 적혀 있는데 실제 약속은 14:30이면 운영자가 전화를 놓친다.
-   */
-  bookedClocks?: string[];
   /** blocked일 때 남긴 메모 */
   reason?: string | null;
 }
@@ -75,25 +68,14 @@ export interface Timetable {
   cells: Record<string, Record<string, TimetableCell>>;
 }
 
-export interface BookedEntry {
-  name: string;
-  /** 실제 통화 약속 시각 ("14:30") */
-  clock: string;
-}
-
 export interface TimetableInput {
   now: Date;
   /** 시작 날짜 "YYYY-MM-DD" (KST) */
   fromDateKey: string;
   /** 보여줄 날 수 */
   dayCount: number;
-  /**
-   * 예약이 잡힌 슬롯: **그 예약을 품는 칸의 시작 시각** → 신청자들.
-   *
-   * 예약 시각 그대로가 아니라 칸 기준으로 넘긴다. 슬롯 길이를 바꾼 뒤에도
-   * 옛 예약이 표에서 사라지지 않게 하기 위해서다.
-   */
-  bookedBySlot: Map<number, BookedEntry[]>;
+  /** 예약이 잡힌 슬롯: 시작 시각 → 신청자 이름들 */
+  bookedBySlot: Map<number, string[]>;
   /** 차단된 슬롯: 시작 시각 → 사유 */
   blockedBySlot: Map<number, string | null>;
 }
@@ -122,23 +104,15 @@ export function buildTimetable(input: TimetableInput): Timetable {
       timeSet.add(clock);
 
       const key = start.getTime();
-      const booked = bookedBySlot.get(key);
+      const names = bookedBySlot.get(key);
       let cell: TimetableCell;
 
       // 순서가 중요하다.
       //
       // 예약이 잡힌 칸은 지난 시간이라도 "예약"으로 보여야 한다. 운영자가
       // 오늘 누구와 통화하기로 했는지 확인하는 화면이기도 하기 때문이다.
-      if (booked && booked.length > 0) {
-        cell = {
-          startAt: start.toISOString(),
-          state: "booked",
-          bookedNames: booked.map((b) => b.name),
-          // 칸 시작과 어긋난 약속만 시각을 함께 보여준다. 모두 정시면 군더더기다.
-          bookedClocks: booked.some((b) => b.clock !== clock)
-            ? booked.map((b) => b.clock)
-            : undefined,
-        };
+      if (names && names.length > 0) {
+        cell = { startAt: start.toISOString(), state: "booked", bookedNames: names };
       } else if (blockedBySlot.has(key)) {
         cell = {
           startAt: start.toISOString(),
