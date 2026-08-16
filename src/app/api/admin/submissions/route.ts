@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     let query = `
       SELECT id, name, "birthDate", phone, "subjectType", "subjectOther", "audioFiles", status,
              "preferredSlotAt", "anyTimeOk", "consentPrivacyAt",
-             "calledAt", "callResult", "adminNotes", "createdAt", "updatedAt"
+             "calledAt", "callResult", "adminNotes", "notifiedAt", "notifyError", "createdAt", "updatedAt"
       FROM "Submission"
     `;
     const values: (string | number)[] = [];

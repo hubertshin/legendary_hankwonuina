@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/event-utils";
 import { CallLogCell } from "@/components/admin/call-log-cell";
+import { NotifyStatusCell } from "@/components/admin/notify-status-cell";
 
 type SortField = 'createdAt' | 'name' | 'preferredSlotAt' | 'phone';
 type SortDirection = 'asc' | 'desc';
@@ -335,13 +336,14 @@ function formatSlotLabel(value: string | Date): string {
                   </Button>
                 </TableHead>
                 <TableHead>구분</TableHead>
+                <TableHead>알림</TableHead>
                 <TableHead className="min-w-[16rem]">통화 기록 · 메모</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedSubmissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     신청 내역이 없습니다.
                   </TableCell>
                 </TableRow>
@@ -395,6 +397,14 @@ function formatSlotLabel(value: string | Date): string {
                         <span className="text-sm text-muted-foreground">
                           {submission.subjectType ?? '—'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <NotifyStatusCell
+                          id={submission.id}
+                          notifiedAt={submission.notifiedAt ?? null}
+                          notifyError={submission.notifyError ?? null}
+                          onChanged={fetchSubmissions}
+                        />
                       </TableCell>
                       <TableCell>
                         <CallLogCell

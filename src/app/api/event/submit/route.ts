@@ -157,8 +157,12 @@ export async function POST(request: Request) {
 
     // 운영자 알림. 이미 저장이 끝났으므로 실패해도 응답은 성공이어야 한다.
     // notifyNewBooking은 예외를 던지지 않지만, 방어적으로 한 번 더 감싼다.
+    //
+    // 결과를 DB에 남기는 이유: 발송이 조용히 실패하면 아무도 모른다. 실제로
+    // API 키가 무효화된 동안 신청 두 건의 알림이 유실됐고, 고객이 알려주기
+    // 전까지 알 수 없었다. admin에서 실패한 건을 볼 수 있어야 한다.
     try {
-      await notifyNewBooking({
+      const results = await notifyNewBooking({
         submissionId: submission.id,
         name: submission.name,
         phone: submission.phone,
@@ -174,8 +178,25 @@ export async function POST(request: Request) {
         anyTimeOk: submission.anyTimeOk,
         createdAt: submission.createdAt.toISOString(),
       });
+
+      const sent = results.some((r) => r.ok);
+      const reason = results.find((r) => !r.ok)?.reason;
+      await prisma.submission.update({
+        where: { id: submission.id },
+        data: {
+          notifiedAt: sent ? new Date() : null,
+          notifyError: sent ? null : (reason ?? "unknown").slice(0, 500),
+        },
+      });
     } catch (error) {
       console.error("[event/submit] 알림 처리 중 예외 (신청은 저장됨):", error);
+      // 상태 기록 자체가 실패해도 신청은 그대로 둔다.
+      await prisma.submission
+        .update({
+          where: { id: submission.id },
+          data: { notifyError: "알림 처리 중 예외" },
+        })
+        .catch(() => undefined);
     }
 
     return NextResponse.json({

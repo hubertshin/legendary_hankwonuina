@@ -58,6 +58,7 @@ DATABASE_URL="..." npx prisma db push
 | 파일 | 내용 | 관련 PR |
 |---|---|---|
 | `2026-08-16_booking_fields.sql` | 상담 예약 컬럼(`preferredSlotAt`, `anyTimeOk`, `consentPrivacyAt`) + 통화 기록(`calledAt`, `callResult`) 추가, `birthDate` 필수→선택 | #1 |
+| `2026-08-16_notify_status.sql` | 알림 발송 상태(`notifiedAt`, `notifyError`) 추가 | #7 |
 
 ## 적용 확인
 
