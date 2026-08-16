@@ -5,7 +5,25 @@
 
 이 프로젝트는 `prisma migrate`가 아니라 **`prisma db push`** 방식을 씁니다. 그래서 Prisma가 관리하는 마이그레이션 이력이 없고, 스키마를 바꿔도 자동으로 적용되는 경로가 없습니다.
 
-## ⚠️ 배포한다고 DB가 바뀌지 않습니다
+## ✅ 배포하면 자동으로 적용됩니다
+
+`vercel-build`가 이 디렉터리의 SQL을 **파일명 순서대로 실행**한 뒤 Next.js를 빌드합니다.
+
+```json
+"vercel-build": "prisma generate && node scripts/apply-migrations.mjs && next build"
+```
+
+**배포 = 마이그레이션 적용**이므로 순서를 틀릴 수 없습니다. 하나라도 실패하면 빌드가 중단되어, 스키마가 어긋난 채로 배포되지 않습니다.
+
+수동으로 실행하려면:
+
+```bash
+DATABASE_URL="..." npm run db:migrate:apply
+```
+
+---
+
+## 왜 이렇게 만들었나 (이전 방식의 문제)
 
 `package.json`의 빌드 스크립트를 보면 이유가 분명합니다.
 
@@ -21,7 +39,7 @@ PrismaClientKnownRequestError (P2022)
 The column `Submission.preferredSlotAt` does not exist in the current database.
 ```
 
-**스키마를 바꾼 배포에서는 대상 DB에 아래 절차를 직접 실행해야 합니다.**
+이 문제로 **운영 신청이 두 번 멈췄습니다.** 사람이 순서를 기억하는 방식으로는 또 일어나기에 자동 적용으로 바꿨습니다.
 
 ## 적용 방법
 
