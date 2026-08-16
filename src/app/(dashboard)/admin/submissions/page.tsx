@@ -400,10 +400,8 @@ function formatSlotLabel(value: string | Date): string {
                       </TableCell>
                       <TableCell>
                         <NotifyStatusCell
-                          id={submission.id}
                           notifiedAt={submission.notifiedAt ?? null}
                           notifyError={submission.notifyError ?? null}
-                          onChanged={fetchSubmissions}
                         />
                       </TableCell>
                       <TableCell>
