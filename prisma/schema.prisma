@@ -252,6 +252,12 @@ model Submission {
   // Audio Files (JSON array)
   audioFiles      Json             // [{s3Key, filename, duration, mimeType, size, clipIndex}]
 
+  /// 운영자 알림 발송 시각. null이면 아직 못 보냈다는 뜻이다.
+  /// 발송 실패가 신청 저장을 막지는 않지만, 실패했다는 사실은 보여야 한다.
+  notifiedAt      DateTime?
+  /// 발송 실패 사유. 원인을 모르면 고칠 수 없다.
+  notifyError     String?
+
   // ── 통화 기록 ──
   /// 마지막 통화 시도 시각. 통화했는지 여부는 이 값의 존재로 판단한다.
   calledAt        DateTime?
