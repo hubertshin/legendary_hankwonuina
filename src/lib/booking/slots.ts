@@ -96,9 +96,41 @@ export function isBlocked(slotStart: Date, blocked: string[] | undefined): boole
   return blocked.some((iso) => new Date(iso).getTime() === target);
 }
 
+/**
+ * 이 슬롯 구간을 점유한 예약 수.
+ *
+ * 시각이 정확히 같은지가 아니라 **구간 안에 들어오는지**로 센다.
+ *
+ * 슬롯 길이를 30분에서 1시간으로 바꾸면 예전에 잡힌 14:30 예약이 어느
+ * 칸과도 시각이 일치하지 않게 된다. 같은지로만 세면 그 예약이 없는 셈이
+ * 되어 14:00에 또 한 명을 받고, 상담사는 같은 시간에 두 통화를 하게 된다.
+ */
 function bookedCount(slotStart: Date, occupied: OccupiedSlot[]): number {
-  const target = slotStart.toISOString();
-  return occupied.filter((o) => o.startAt === target).length;
+  const from = slotStart.getTime();
+  const to = from + BOOKING.slotMinutes * 60_000;
+  return occupied.filter((o) => {
+    const at = new Date(o.startAt).getTime();
+    return at >= from && at < to;
+  }).length;
+}
+
+/**
+ * 그 시각을 품는 슬롯의 시작 시각. 운영 시간 밖이면 null.
+ *
+ * 슬롯 길이가 바뀐 뒤에도 옛 예약을 화면에 붙잡아두기 위해 쓴다.
+ */
+export function slotCoveringInstant(instant: Date): Date | null {
+  const at = instant.getTime();
+  const length = BOOKING.slotMinutes * 60_000;
+  // 자정 근처 예약이 전날 슬롯에 속할 수 있어 앞뒤 날짜까지 본다.
+  for (const offset of [-1, 0, 1]) {
+    const dateKey = kstDateKey(new Date(at + offset * 86_400_000));
+    for (const start of candidateSlotStarts(dateKey)) {
+      const from = start.getTime();
+      if (at >= from && at < from + length) return start;
+    }
+  }
+  return null;
 }
 
 function groupIdFor(slotStart: Date): string {
