@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { BOOKING } from "@/lib/booking/config";
 import { buildDayViews } from "@/lib/booking/slots";
+import { READ_RULE, checkRateLimit, clientKey } from "@/lib/booking/ratelimit";
 
 /**
  * 예약 가능 시간 조회.
@@ -9,7 +10,15 @@ import { buildDayViews } from "@/lib/booking/slots";
  * 이미 잡힌 슬롯은 Submission에서 읽어 정원 계산에 반영한다. 마감된 슬롯은
  * 응답에 포함하지 않으므로 클라이언트가 별도로 거를 필요가 없다.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const limit = checkRateLimit(clientKey(request, "slots"), READ_RULE);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
   try {
     const now = new Date();
 
