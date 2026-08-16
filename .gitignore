@@ -58,3 +58,7 @@ pids
 uploads/
 public/uploads/
 .env*.local
+
+# 로컬 개발 부산물 (이 변경과 무관하게 섞여 들어간 적이 있다)
+.tool-versions
+schema.sql
