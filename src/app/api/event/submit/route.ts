@@ -3,6 +3,7 @@ import { submissionSchema } from "@/lib/validations";
 import { cleanPhoneNumber } from "@/lib/event-utils";
 import { prisma } from "@/lib/db";
 import { slotUnavailableReason } from "@/lib/booking/slots";
+import { BIRTH_DATE_MESSAGES, parseBirthDate } from "@/lib/booking/birthdate";
 import { BOOKING } from "@/lib/booking/config";
 import { notifyNewBooking } from "@/lib/notify";
 import {
@@ -109,6 +110,30 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      생년월일. 화면 검증만 믿으면 안 된다 — API는 공개 엔드포인트라
+      브라우저를 거치지 않고 임의 값이 들어올 수 있고, 검증 없이 `new Date`에
+      넘기면 Invalid Date가 그대로 Prisma까지 내려가 500이 난다.
+
+      예약 흐름에서만 필수다. 기존 음성 신청 흐름은 종전대로 null을 허용한다.
+    */
+    let birthInstant: Date | null = null;
+    if (birthDate !== undefined && birthDate.trim() !== "") {
+      const parsed = parseBirthDate(birthDate);
+      if (!parsed.ok) {
+        return NextResponse.json(
+          { error: BIRTH_DATE_MESSAGES[parsed.error] },
+          { status: 400 }
+        );
+      }
+      birthInstant = parsed.instant;
+    } else if (isBookingFlow) {
+      return NextResponse.json(
+        { error: "생년월일을 입력해주셔야 신청할 수 있습니다." },
+        { status: 400 }
+      );
+    }
+
     const slotAt = preferredSlotAt ? new Date(preferredSlotAt) : null;
 
     const submission = await prisma.$transaction(async (tx) => {
@@ -153,7 +178,8 @@ export async function POST(request: Request) {
       return tx.submission.create({
         data: {
           name,
-          birthDate: birthDate ? new Date(birthDate) : null,
+          // KST 자정으로 고정된 값이다 (birthdate.ts 참고)
+          birthDate: birthInstant,
           phone: cleanPhoneNumber(phone),
           subjectType,
           subjectOther: subjectType === "기타" ? subjectOther : null,
