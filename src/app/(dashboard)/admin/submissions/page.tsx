@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/event-utils";
+import { ageFromBirthDate, formatBirthDate } from "@/lib/booking/birth-display";
 import { CallLogCell } from "@/components/admin/call-log-cell";
 import { NotifyStatusCell } from "@/components/admin/notify-status-cell";
 
@@ -336,6 +337,7 @@ function formatSlotLabel(value: string | Date): string {
                     {sortField !== 'name' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
                   </Button>
                 </TableHead>
+                <TableHead>생년월일</TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
@@ -372,7 +374,7 @@ function formatSlotLabel(value: string | Date): string {
             <TableBody>
               {paginatedSubmissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     신청 내역이 없습니다.
                   </TableCell>
                 </TableRow>
@@ -413,6 +415,25 @@ function formatSlotLabel(value: string | Date): string {
                           )}
                           {submission.name}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {/*
+                          예약 흐름에서 생년월일을 받기 전에 들어온 신청은
+                          비어 있다. 그 자리를 "—"로 두어 값이 없다는 사실이
+                          보이게 한다.
+                        */}
+                        {submission.birthDate && formatBirthDate(submission.birthDate) ? (
+                          <div className="whitespace-nowrap">
+                            <div>{formatBirthDate(submission.birthDate)}</div>
+                            {ageFromBirthDate(submission.birthDate) !== null && (
+                              <div className="text-xs text-muted-foreground">
+                                만 {ageFromBirthDate(submission.birthDate)}세
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {submission.preferredSlotAt ? (
