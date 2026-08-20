@@ -197,8 +197,17 @@ export default function SubmissionDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">생년월일</p>
               <p className="font-medium">
+                {/*
+                  타임존을 KST로 못 박는다. 브라우저 타임존을 따라가면
+                  UTC보다 서쪽에서 볼 때 생년월일이 하루 앞으로 보인다.
+                */}
                 {submission.birthDate
-                  ? new Date(submission.birthDate).toLocaleDateString("ko-KR")
+                  ? new Intl.DateTimeFormat("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }).format(new Date(submission.birthDate))
                   : "—"}
               </p>
             </div>

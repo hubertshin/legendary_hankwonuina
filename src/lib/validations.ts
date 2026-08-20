@@ -86,7 +86,13 @@ export const eventAudioUploadSchema = z.object({
 
 export const submissionSchema = z.object({
   name: z.string().min(1, "이름을 입력해주세요"),
-  // 상담 예약 흐름에서는 받지 않는다. 기존 음성 신청 흐름과의 호환을 위해 선택.
+  /**
+   * 생년월일 "YYYY-MM-DD".
+   *
+   * 스키마 수준에서는 선택이다 — 기존 음성 신청 흐름은 받지 않기 때문이다.
+   * **예약 흐름에서는 필수**이며, 실재하는 날짜인지·범위 안인지는 라우트에서
+   * parseBirthDate로 확인한다 (개인정보 동의를 다루는 방식과 같다).
+   */
   birthDate: z.string().optional(),
   phone: z.string().regex(/^01[0-9]{8,9}$/, "올바른 휴대폰 번호를 입력해주세요"),
   subjectType: z.enum(["본인", "부모님", "형제자매", "친구", "기타"]).default("본인"),

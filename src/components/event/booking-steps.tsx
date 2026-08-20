@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { TRACKS, CALLER_ID_LABEL, type TrackId } from "@/lib/booking/config";
+import {
+  BIRTH_DATE_MESSAGES,
+  birthDateLabel,
+  formatBirthInput,
+  parseBirthDate,
+} from "@/lib/booking/birthdate";
 import type { DayView } from "@/lib/booking/slots";
 
 /**
@@ -21,6 +27,8 @@ export interface BookingResult {
   preferredSlotAt: string | null;
   anyTimeOk: boolean;
   name: string;
+  /** "YYYY-MM-DD" (KST 기준 날짜). 예약 흐름에서는 필수다 */
+  birthDate: string;
   phone: string;
   consentPrivacy: boolean;
 }
@@ -46,6 +54,7 @@ export default function BookingSteps({ onSubmit, isSubmitting, errorMessage }: P
   const [anyTime, setAnyTime] = useState(false);
 
   const [name, setName] = useState("");
+  const [birth, setBirth] = useState("");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -87,9 +96,20 @@ export default function BookingSteps({ onSubmit, isSubmitting, errorMessage }: P
     setFieldError(null);
   }
 
+  function handleBirth(value: string) {
+    setBirth(formatBirthInput(value));
+    setFieldError(null);
+  }
+
   async function submit() {
     if (!name.trim()) {
       setFieldError("성함을 입력해주세요.");
+      return;
+    }
+    // 서버와 같은 함수로 판정한다. 통과한 값만 "YYYY-MM-DD"로 올린다.
+    const birthCheck = parseBirthDate(birth);
+    if (!birthCheck.ok) {
+      setFieldError(BIRTH_DATE_MESSAGES[birthCheck.error]);
       return;
     }
     if (!/^01[0-9]{8,9}$/.test(phone.replace(/[^\d]/g, ""))) {
@@ -107,6 +127,7 @@ export default function BookingSteps({ onSubmit, isSubmitting, errorMessage }: P
       preferredSlotAt: anyTime ? null : slotAt,
       anyTimeOk: anyTime,
       name: name.trim(),
+      birthDate: birthCheck.dateKey,
       phone,
       consentPrivacy: consent,
     });
@@ -150,12 +171,14 @@ export default function BookingSteps({ onSubmit, isSubmitting, errorMessage }: P
         <StepContact
           whenLabel={anyTime ? null : slotAt ? formatWhen(slotAt) : null}
           name={name}
+          birth={birth}
           phone={phone}
           consent={consent}
           onName={(v) => {
             setName(v);
             setFieldError(null);
           }}
+          onBirth={handleBirth}
           onPhone={handlePhone}
           onConsent={(v) => {
             setConsent(v);
@@ -173,7 +196,37 @@ export default function BookingSteps({ onSubmit, isSubmitting, errorMessage }: P
 
 /* ── STEP 1 ─────────────────────────────────────────────────────────── */
 
+/** 선택 피드백을 보여주는 시간(ms). 화면이 곧장 바뀌면 뭘 눌렀는지 알 수 없다. */
+const SELECT_FEEDBACK_MS = 200;
+
 function StepTrack({ onSelect }: { onSelect: (id: TrackId) => void }) {
+  // 누른 카드를 잠깐 채워서 보여준 뒤 다음 단계로 넘어간다.
+  const [pressed, setPressed] = useState<TrackId | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  function pick(id: TrackId) {
+    // 연타로 두 번 넘어가는 것을 막는다.
+    if (pressed) return;
+    setPressed(id);
+
+    // 애니메이션을 끈 사용자에게 지연은 그냥 '느린 앱'일 뿐이다.
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+
+    if (reduced) {
+      onSelect(id);
+      return;
+    }
+    timer.current = setTimeout(() => onSelect(id), SELECT_FEEDBACK_MS);
+  }
+
   return (
     <section>
       <h3
@@ -183,35 +236,69 @@ function StepTrack({ onSelect }: { onSelect: (id: TrackId) => void }) {
         누구의 자서전인가요?
       </h3>
       <p className="text-base mb-6" style={{ color: "#666" }}>
-        선택하신 내용에 맞춰 안내드릴게요.
+        아래에서 하나를 눌러 시작해주세요.
       </p>
 
       {/* 모바일 1열, 데스크톱 2열 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {TRACKS.map((card) => (
-          <button
-            key={card.id}
-            type="button"
-            onClick={() => onSelect(card.id)}
-            className="flex flex-col items-start gap-2 rounded-2xl border-2 bg-white p-6 text-left transition active:scale-[0.99] hover:shadow-md min-h-[9rem]"
-            style={{ borderColor: "#E5E0D6" }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = GOLD)}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#E5E0D6")}
-          >
-            <span aria-hidden className="text-4xl">
-              {card.emoji}
-            </span>
-            <span
-              className="whitespace-pre-line text-lg md:text-xl font-bold leading-snug"
-              style={{ color: INK }}
+        {TRACKS.map((card) => {
+          const isPressed = pressed === card.id;
+          return (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => pick(card.id)}
+              aria-pressed={isPressed}
+              /*
+                버튼처럼 보이게 하는 것이 이 화면의 전부다.
+                - 테두리 2px 금색을 **상시** 적용한다. 모바일에는 hover가 없어
+                  hover로만 강조하면 주 유입층에게는 아무 단서도 없는 것과 같다
+                - 하단 CTA 바 + 화살표로 "여기를 누르면 다음으로 간다"를 명시한다
+                - 그림자로 주변 정보 카드(후기·샘플)와 층위를 분리한다
+              */
+              className="group flex flex-col rounded-2xl border-2 p-5 text-left shadow-sm transition hover:shadow-lg active:scale-[0.99] min-h-[13rem]"
+              style={{
+                borderColor: GOLD,
+                backgroundColor: isPressed ? "#FBF6E9" : "#fff",
+                /*
+                  배경색은 트랜지션에서 뺀다. Tailwind `transition`(150ms)이
+                  배경까지 물면 다음 단계로 넘어가기 직전에야 색이 다 차서
+                  "눌렸다"는 피드백이 사실상 보이지 않는다. 색은 즉시,
+                  그림자·확대만 부드럽게.
+                */
+                transitionProperty: "box-shadow, transform",
+              }}
             >
-              {card.title}
-            </span>
-            <span className="text-base" style={{ color: "#888" }}>
-              {card.caption}
-            </span>
-          </button>
-        ))}
+              <span
+                aria-hidden
+                className="flex h-14 w-14 items-center justify-center rounded-full text-3xl"
+                style={{ backgroundColor: "#FBF6E9" }}
+              >
+                {card.emoji}
+              </span>
+              <span
+                className="mt-3 whitespace-pre-line text-lg md:text-xl font-bold leading-snug"
+                style={{ color: INK }}
+              >
+                {card.title}
+              </span>
+              <span className="mt-1 text-base" style={{ color: "#888" }}>
+                {card.caption}
+              </span>
+
+              {/* mt-auto — 카드 높이가 달라도 두 CTA 바가 같은 줄에 놓인다 */}
+              <span className="mt-auto block w-full pt-4">
+                <span
+                  className="flex items-center justify-between rounded-xl px-4 py-3 text-base font-bold text-white transition group-hover:brightness-95"
+                  style={{ backgroundColor: GOLD, minHeight: "3rem" }}
+                >
+                  이걸로 시작하기
+                  <span aria-hidden>→</span>
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -398,9 +485,11 @@ function StepTime({
 function StepContact({
   whenLabel,
   name,
+  birth,
   phone,
   consent,
   onName,
+  onBirth,
   onPhone,
   onConsent,
   onBack,
@@ -410,9 +499,11 @@ function StepContact({
 }: {
   whenLabel: string | null;
   name: string;
+  birth: string;
   phone: string;
   consent: boolean;
   onName: (v: string) => void;
+  onBirth: (v: string) => void;
   onPhone: (v: string) => void;
   onConsent: (v: boolean) => void;
   onBack: () => void;
@@ -420,6 +511,10 @@ function StepContact({
   isSubmitting: boolean;
   error: string | null;
 }) {
+  // 8자리를 다 채웠을 때만 확인 문구를 띄운다. 입력 도중에 띄우면
+  // "1950년 3월"처럼 미완성 날짜가 맞다고 말해주는 꼴이 된다.
+  const birthCheck = parseBirthDate(birth);
+
   return (
     <section>
       <BackLink onClick={onBack} label="시간 다시 고르기" />
@@ -448,6 +543,38 @@ function StepContact({
           />
         </Field>
 
+        <Field
+          label="생년월일"
+          required
+          hint={
+            birthCheck.ok ? undefined : "숫자 8자리만 눌러주세요. 예) 1950년 3월 5일 → 19500305"
+          }
+        >
+          {/*
+            숫자 한 칸으로 받는다.
+            - inputMode="numeric": 모바일에서 숫자 키패드가 뜬다. 시니어에게
+              문자 키보드 전환은 그 자체로 이탈 요인이다
+            - type="date"를 쓰지 않는 이유: 기본 피커가 올해부터 거슬러
+              올라가는 스피너라 1950년까지 수십 번을 넘겨야 한다
+            - 하이픈은 자동으로 넣는다. 사용자는 숫자만 누른다
+          */}
+          <input
+            type="text"
+            inputMode="numeric"
+            value={birth}
+            onChange={(e) => onBirth(e.target.value)}
+            placeholder="19500305"
+            autoComplete="bday"
+            className="w-full rounded-xl border-2 px-4 py-3"
+            style={{ borderColor: "#E5E0D6", fontSize: "16px", minHeight: "3rem" }}
+          />
+          {birthCheck.ok && (
+            <p className="mt-1 text-base font-bold" style={{ color: "#B5965E" }}>
+              {birthDateLabel(birthCheck.dateKey)} 맞으신가요?
+            </p>
+          )}
+        </Field>
+
         <Field label="휴대폰 번호" required hint="이 번호로 전화드립니다">
           <input
             type="tel"
@@ -473,8 +600,12 @@ function StepContact({
             style={{ accentColor: GOLD }}
           />
           <span className="text-base leading-snug" style={{ color: INK }}>
+            {/*
+              수집 항목과 고지가 다르면 동의는 법적 효력이 없다.
+              생년월일을 받기 시작했으므로 문구도 함께 바꾼다.
+            */}
             <strong style={{ color: "#C0392B" }}>(필수)</strong> 상담 진행을 위한 개인정보
-            (성함·연락처) 수집·이용에 동의합니다.
+            (성함·생년월일·연락처) 수집·이용에 동의합니다.
           </span>
         </label>
       </div>

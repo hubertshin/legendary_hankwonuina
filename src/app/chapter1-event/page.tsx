@@ -52,6 +52,7 @@ export default function EventLandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: values.name,
+          birthDate: values.birthDate,
           phone: cleanPhoneNumber(values.phone),
           subjectType: values.subjectType,
           preferredSlotAt: values.preferredSlotAt ?? undefined,
